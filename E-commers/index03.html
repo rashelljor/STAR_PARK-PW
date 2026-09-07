@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carrito — Star Park</title>
+    <link rel="stylesheet" href="pagPrincipal/estilos.css">
+    <link rel="stylesheet" href="carrito.css">
+</head>
+<body>
+
+    <header>
+        <nav>
+            <a href="index.html"><img src="img/logostar.png" alt="Star Park Logo"></a>
+            <ul>
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="tienda.html">Tienda</a></li>
+            </ul>
+            <a class="botonAmarillo" href="tienda.html">← Seguir comprando</a>
+        </nav>
+    </header>
+
+    <main>
+        <div class="seccionCabecera">
+            <h2>TU CARRITO</h2>
+            <p class="etiquetaGris">Revisa tu selección y completa tu reserva 🛒</p>
+        </div>
+
+
+        <div class="layoutCarrito">
+            <div class="glass bloqueCarrito">
+                <h3>Servicios seleccionados</h3>
+                <div id="listaCarrito"></div>
+                <div class="totalFila">
+                    <p>TOTAL</p>
+                    <p class="amarillo" id="totalPrecio">S/ 0.00</p>
+                </div>
+            </div>
+
+
+            <div class="glass bloqueCarrito">
+                <h3>Datos para la reserva</h3>
+                <form id="formularioCarrito">
+                    <div class="campo">
+                        <label for="nombre">Nombre completo</label>
+                        <input type="text" id="nombre" placeholder="Nombres" required>
+                    </div>
+                    <div class="campo">
+                        <label for="correo">Correo</label>
+                        <input type="email" id="correo" placeholder="abc@gmail.com" required>
+                    </div>
+                    <div class="campo">
+                        <label for="telefono">Teléfono</label>
+                        <input type="tel" id="telefono" placeholder="999 999 999" required>
+                    </div>
+                    <div class="campo">
+                        <label for="fecha">Fecha de visita</label>
+                        <input type="date" id="fecha" required>
+                    </div>
+                    <button type="submit" class="botonAmarillo">✅ Confirmar reserva</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+
+    <footer>
+        <div class="footerInterior">
+            <div>
+                <p class="footerNombre">STAR PARK</p>
+                <p class="etiquetaGris">©2026 FAMILY PARK S.A.C.</p>
+            </div>
+        </div>
+    </footer>
+
+
+    <script src="carrito.js"></script>
+
+
+</body>
+</html>
