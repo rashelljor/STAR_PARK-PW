@@ -3,7 +3,6 @@ let formularioCarrito = document.getElementById('formularioCarrito')
 let carrito  = JSON.parse(localStorage.getItem('carrito'))  || []
 let reservas = JSON.parse(localStorage.getItem('reservas')) || []
 
-
 // Bloquea fechas pasadas en el input de fecha
 let hoy = new Date()
 let anio = hoy.getFullYear()
@@ -11,12 +10,10 @@ let mes  = String(hoy.getMonth() + 1).padStart(2, '0')
 let dia  = String(hoy.getDate()).padStart(2, '0')
 document.getElementById('fecha').min = anio + '-' + mes + '-' + dia
 
-
 function mostrarCarrito() {
     let lista = document.getElementById('listaCarrito')
     lista.innerHTML = ''
     let total = 0
-
 
     carrito.forEach((item, indice) => {
         total = total + item.precio
@@ -24,10 +21,8 @@ function mostrarCarrito() {
             + ' <button onclick="eliminar(' + indice + ')">✕</button></p>'
     })
 
-
     document.getElementById('totalPrecio').textContent = 'S/ ' + total + '.00'
 }
-
 
 function eliminar(indice) {
     carrito.splice(indice, 1)
@@ -35,13 +30,11 @@ function eliminar(indice) {
     mostrarCarrito()
 }
 
-
 function guardar() {
     if (carrito.length === 0) {
         alert('Tu carrito está vacío.')
         return
     }
-
 
     let reserva = {
         'nombre'       : document.getElementById('nombre').value,
@@ -49,26 +42,30 @@ function guardar() {
         'telefono'     : document.getElementById('telefono').value,
         'fecha'        : document.getElementById('fecha').value,
         'total'        : document.getElementById('totalPrecio').textContent,
-        'fechaRegistro': new Date().toLocaleDateString('es-PE')
+        'items'        : carrito,
+        'pagado'       : false,
+        'fechaRegistro': new Date().toLocaleString('es-PE', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        })
     }
-
 
     reservas.push(reserva)
     localStorage.setItem('reservas', JSON.stringify(reservas))
     localStorage.removeItem('carrito')
     carrito = []
 
-
     alert('¡Reserva confirmada! 🚀')
     formularioCarrito.reset()
     mostrarCarrito()
 }
 
-
 formularioCarrito.addEventListener('submit', (e) => {
     e.preventDefault()
     guardar()
 })
-
-
 mostrarCarrito()

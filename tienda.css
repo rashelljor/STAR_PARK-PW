@@ -1,0 +1,52 @@
+/* tienda.css */
+main {
+    padding: 40px 60px;
+    max-width: 1280px;
+    margin: 0 auto;
+}
+
+.grillaTienda {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 24px;
+}
+
+.tarjetaServicio {
+    border: 1px solid var(--borde);
+    border-radius: 12px;
+}
+
+.tarjetaServicio img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+}
+
+.tarjetaServicio .info {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tarjetaServicio p {
+    font-size: 18px;
+}
+
+.tarjetaServicio button {
+    background-color: var(--amarillo);
+    color: #3c2f00;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+@media (max-width: 800px) {
+    main {
+        padding: 40px 16px;
+    }
+
+    .grillaTienda {
+        grid-template-columns: 1fr;
+    }
+}

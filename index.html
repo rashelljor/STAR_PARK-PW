@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Star Park</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text x='50%' y='50%' text-anchor='middle' dominant-baseline='central' font-size='80'>🌟</text></svg>"/>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="estilos.css">
+</head>
+
+
+<body>
+    <header class="bg-dark">
+        <nav class="navbar navbar-dark">
+            <div class="container-fluid gap-3">
+                <a href="index.html"> <img src="img/logostar.png" alt="Star Park Logo" height="48"></a>
+                <ul class="navbar-nav flex-row gap-5">
+
+
+                    <li class="nav-item dropdown">
+                        <div class="d-flex align-items-center"> 
+                            <a class="nav-link" href="index.html">Inicio</a>
+                            <button class="btn btn-link dropdown-toggle text-light"
+                                data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mostrar opciones de Inicio"></button>
+                        </div>
+
+                        <ul class="dropdown-menu dropdown-menu-dark ">
+                            <li><a class="dropdown-item" href="index.html#atracciones">Atracciones</a></li>
+                            <li><a class="dropdown-item" href="index.html#servicios">Servicios</a></li>
+                            <li><a class="dropdown-item" href="index.html#base-operaciones">Ubicación y Horarios</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <div class="d-flex align-items-center"> 
+                        <a class="nav-link" href="tienda.html">Tienda</a>
+                        <button type="button" class="btn btn-link dropdown-toggle dropdown-toggle-split text-light p-0 ms-1"
+                            data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mostrar opciones de Tienda"></button>
+                        </div>
+                        <ul class="dropdown-menu dropdown-menu-dark">
+                            <li><a class="dropdown-item" href="tienda.html#promociones">Promociones</a></li>
+                            <li><a class="dropdown-item" href="tienda.html#botin">Botín Espacial</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="reservas.html">Mis Reservas</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="miscompras.html">Mis Compras</a>
+                    </li>
+                </ul>
+                <a class="btn btn-primary rounded-pill botonAmarillo" href="carrito.html">VER MI CARRITO</a>
+            </div>
+        </nav>
+    </header>
+    <section id="inicio" class="hero">
+        <img src="../img/portada.png" alt="2 jóvenes jugando en el AirGame, Star Park" class="heroFoto">
+        <div class="heroContenido">
+            <p class="etiqueta">🚀 ¡Destino galáctico #1 en Huancayo!</p>
+            <div class="heroTituloFila">
+                <h1>TU AVENTURA ESPACIAL,<br><em>Comienza Aquí</em></h1>
+            </div>
+            <p class="subtexto">
+                Bienvenidos al centro de juegos mecánicos y arcade más emocionante de Huancayo.
+                ¡Regístrate como un nuevo astronauta y recibe tu primera misión!
+            </p>
+        </div>
+    </section>
+    
+    <main>
+        <!-- --- Sección de Atracciones --- -->
+        <section id="atracciones">
+            <div class="seccionCabecera">
+                <h2>ATRACCIONES</h2>
+                <p class="etiquetaGris">MULTIVERSO DE ENTRETENIMIENTO 👽</p>
+            </div>
+            <div class="grilla3col">
+                <div class="tarjetaAtraccion">
+                    <div class="tarjetaImgCaja">
+                        <img src="../img/aventuraespacial01.png" alt="Área de juegos, Aventura Espacial">
+                        <div class="badge">INFANTIL</div>
+                    </div>
+                    <h3 class="celeste" >AVENTURA ESPACIAL</h3>
+                    <p>¡Diversión 100% segura para pequeños astronautas de 4 a 12 años! Saltarín, trampolín, carritos y tobogán.</p>
+                </div>
+
+                <div class="tarjetaAtraccion">
+                    <div class="tarjetaImgCaja">
+                        <img src="../img/misionmarciana01.png" alt="Piscina de pelotas y sensores, Misión Marciana">
+                        <div class="badge">INFANTIL</div>
+                    </div>
+                    <h3 class="celeste">MISIÓN MARCIANA</h3>
+                    <p>Viaja a Marte en una aventura inmersiva: tecnología táctil, sensores interactivos y zona de escalada.</p>
+                </div>
+
+                <div class="tarjetaAtraccion">
+                    <div class="tarjetaImgCaja">
+                        <img src="../img/maquinas.png" alt="Juegos Arcade">
+                        <div class="badge">FAMILIAR</div>
+                    </div>
+                    <h3 class="celeste">JUEGOS ARCADE</h3>
+                    <p>¡Diversión retro y moderna para todas las edades! Compite en familia en los mejores juegos arcade.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="servicios">
+            <div class="seccionCabecera">
+                <h2>SERVICIOS</h2>
+                <p class="etiquetaGris">SUMINISTROS DE ÉLITE PARA EXPLORADORES 🧑‍🚀</p>
+            </div>
+            <div class="grillaServicios">
+                <div class="tarjetaServicio glass">
+                    <div class="tarjetaServicioImg">
+                        <img src="../img/confiteria.png" alt="Área de Confitería">
+                    </div>
+                    <div class="tarjetaServicioTexto">
+                        <h3 class="celeste">Snacks Premium Aero-espaciales</h3>
+                        <p>Visita nuestra confitería y recarga energías con una selección de sabores de otra galaxia.</p>
+                    </div>
+                </div>
+
+                <div class="tarjetaServicio glass">
+                    <div class="tarjetaServicioImg">
+                        <img src="../img/vitrina.png" alt="Vitrina de juguetes y artículos con temática espacial">
+                    </div>
+                    <div class="tarjetaServicioTexto">
+                        <h3 class="celeste">Bazar Intergaláctico</h3>
+                        <p>Regalos y artículos exclusivos de temática espacial: lapiceros, loncheras, libros y más.</p>
+                    </div>
+                </div>
+
+                <div class="tarjetaServicio glass">
+                    <div class="tarjetaServicioImg">
+                        <img src="../img/cumpleaños.png" alt="Cumpleaños Espaciales, ejemplo de decoración y animación">
+                    </div>
+                    <div class="tarjetaServicioTexto">
+                        <h3 class="celeste">Cumpleaños Espaciales</h3>
+                        <ul>
+                            <li>✓ Acceso VIP a todas las atracciones</li>
+                            <li>✓ Sala VIP ambientada como estación espacial</li>
+                            <li>✓ Anfitrión animador con dinámicas espaciales<li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="base-operaciones">
+            <div class="seccionCabecera">
+                <h2>UBICACIÓN Y HORARIOS</h2>
+                <p class="etiquetaGris">PLANIFICA TU EMBARQUE E INSPECCIONA LA UBICACIÓN 🌍</p>
+            </div>
+            
+            <div class="grillaUbicacion">
+                <div class="tarjetaInfo glass">
+                    <div class="infoFila">
+                        <p class="em">📍</p>
+                        <div>
+                            <h3 class="celeste">Ubicación Estelar</h3>
+                            <p>Sótano del Centro Comiccial Constitución, Calle Real 475, Huancayo, Junín - Perú</p>
+                        </div>
+                    </div>
+                    
+                    <div class="infoFila">
+                        <p class="em">🕐</p>
+                        <div>
+                            <h3 class="amarillo">Horario de Operaciones</h3>
+                            <p>Lun a Vie: 11:00 AM - 10:00 PM<br>Sáb a Dom: 10:00 AM - 10:00 PM</p>
+                        </div>
+                    </div>
+
+                    <div class="infoFila">
+                        <p class="em">🛰️</p>
+                        <div>
+                            <h3 class="celeste">Contacto Galáctico</h3>
+                            <p>997 289 333 | pqcentralpark@gmail.com</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tarjetaMapa glass">
+                    <img src="../img/mapa_huancayo.png" alt="Mapa Ubicación Star Park, Huancayo" class="mapaImagen">
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+        <footer class="bg-dark text-light">
+            <div class="container d-flex justify-content-between align-items-center py-4 flex-column flex-lg-row">
+                <div>
+                    <p class="fw-bold mb-1">STAR PARK</p>
+                    <p>©2026 FAMILY PARK S.A.C.</p>
+                </div>
+                <div class="d-flex gap-3 mt-3 mt-lg-0">
+                    <p>Protocolo de Seguridad y Privacidad</p>
+                    <p>Términos de Uso</p>
+                </div>
+            </div>
+        </footer>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+    </body>
+</html>
