@@ -1,51 +1,58 @@
-/* carrito.css */
+/* Estilos exclusivos de la página del carrito. */
 
+/* Contenedor principal de la página. */
 main {
-    padding: 40px 60px ;
     max-width: 1280px;
+    padding: 40px 60px;
 }
 
+/* Divide el carrito en dos partes: productos y formulario. */
 .layoutCarrito {
     display: grid;
-    grid-template-columns: 1fr 1fr;
     gap: 24px;
+    grid-template-columns: 1fr 1fr;
     margin-top: 24px;
 }
 
+/* Tarjetas que contienen cada parte del carrito. */
 .bloqueCarrito {
-    padding: 28px;
     display: flex;
     flex-direction: column;
     gap: 16px;
+    padding: 28px;
 }
 
+/* Título de cada tarjeta. */
 .bloqueCarrito h3 {
+    border-bottom: 1px solid var(--borde);
     font-size: 18px;
     font-weight: 700;
     padding-bottom: 12px;
-    border-bottom: 1px solid var(--borde);
 }
 
+/* Producto seleccionado y botón para eliminarlo. */
 .itemCarrito {
+    align-items: center;
+    border-bottom: 1px solid var(--borde);
     display: flex;
-    flex-direction: row;
     justify-content: space-between;
     padding: 10px 0;
-    border-bottom: 1px solid var(--borde);
 }
 
 .itemCarrito button {
-    background-color: transparent;
+    background: transparent;
     color: #ff6b6b;
 }
 
+/* Fila que muestra el total de la compra. */
 .totalFila {
     display: flex;
-    justify-content: space-between;
     font-weight: 700;
+    justify-content: space-between;
     padding-top: 8px;
 }
 
+/* Cada campo del formulario: etiqueta arriba e input debajo. */
 .campo {
     display: flex;
     flex-direction: column;
@@ -53,14 +60,27 @@ main {
     margin-bottom: 12px;
 }
 
+/* Estado normal del campo. Bootstrap aporta parte de su estilo. */
 .campo input {
-    background-color: var(--tarjeta);
+    background: var(--tarjeta);
     border: 1px solid var(--borde);
     border-radius: 8px;
     color: var(--texto);
     padding: 10px 14px;
 }
 
+/* El campo se vuelve blanco al enfocarse o tener un valor válido. */
+.campo input:focus,
+.campo input:valid {
+    background: #ffffff;
+    color: #11131b;
+}
+
+.campo input::placeholder {
+    color: #6c757d;
+}
+
+/* En pantallas pequeñas, las dos columnas se apilan. */
 @media (max-width: 800px) {
     main {
         padding: 40px 16px;

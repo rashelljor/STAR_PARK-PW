@@ -1,22 +1,27 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <!-- Configuración básica del documento. -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin — Star Park</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text x='50%' y='50%' text-anchor='middle' dominant-baseline='central' font-size='80'>👽</text></svg>"/>
+
+    <!-- Bootstrap, estilos generales y estilos propios de reservas. -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
     <link rel="stylesheet" href="../../Página principal/Inicio/estilos.css">
     <link rel="stylesheet" href="reservas.css">
 </head>
 <body>
+    <!-- Menú principal compartido por las páginas del proyecto. -->
     <header>
         <nav class="navbar navbar-dark">
             <div class="container-fluid gap-3">
-                <a href="../../Página principal/Inicio/index.html"> <img src="../../img/logostar.png" alt="Star Park Logo" height="48"></a>
+                <a href="../../Página principal/Inicio/index.html">
+                    <img src="../../img/logostar.png" alt="Star Park Logo" height="48">
+                </a>
                 <ul class="navbar-nav flex-row gap-5">
                     <li class="nav-item dropdown">
-                        <div class="d-flex align-items-center"> 
+                        <div class="d-flex align-items-center">
                             <a class="nav-link" href="../../Página principal/Inicio/index.html">Inicio</a>
                             <button class="btn btn-link dropdown-toggle text-light"
                                 data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mostrar opciones de Inicio"></button>
@@ -29,10 +34,10 @@
                         </ul>
                     </li>
                     <li class="nav-item dropdown">
-                        <div class="d-flex align-items-center"> 
-                        <a class="nav-link" href="../../Página principal/Tienda/tienda.html">Tienda</a>
-                        <button type="button" class="btn btn-link dropdown-toggle dropdown-toggle-split text-light p-0 ms-1"
-                            data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mostrar opciones de Tienda"></button>
+                        <div class="d-flex align-items-center">
+                            <a class="nav-link" href="../../Página principal/Tienda/tienda.html">Tienda</a>
+                            <button type="button" class="btn btn-link dropdown-toggle dropdown-toggle-split text-light p-0 ms-1"
+                                data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mostrar opciones de Tienda"></button>
                         </div>
                         <ul class="dropdown-menu dropdown-menu-dark">
                             <li><a class="dropdown-item" href="../../Página principal/Tienda/tienda.html#promociones">Promociones</a></li>
@@ -46,23 +51,28 @@
                         <a class="nav-link" href="../Compras/miscompras.html">Mis Compras</a>
                     </li>
                 </ul>
+                <!-- Acceso directo a la página del carrito. -->
                 <a class="btn btn-primary rounded-pill botonAmarillo" href="carrito.html">VER MI CARRITO</a>
             </div>
         </nav>
     </header>
     
+    <!-- Contenido principal del panel de reservas. -->
     <main>
-        <!-- Contenedor para alertas específicas de admin -->
+        <!-- reservas.js muestra aquí mensajes de estado. -->
         <div id="alertContainer" class="container mt-4"></div>
 
+        <!-- Título y descripción de la sección. -->
         <div class="seccionCabecera">
             <h2>PANEL DE RESERVAS</h2>
-            <p class="etiquetaGris">🧑‍🚀 Todas las reservas registradas</p>
+            <p class="etiquetaGris">Todas las reservas registradas</p>
         </div>
 
+        <!-- Tabla donde reservas.js inserta las reservas guardadas. -->
         <div class="glass bloqueAdmin">
             <table>
                 <thead>
+                    <!-- Encabezados de las columnas de la tabla. -->
                     <tr>
                         <th>#</th>
                         <th>Nombre</th>
@@ -74,25 +84,29 @@
                         <th>Acción</th>
                     </tr>
                 </thead>
+                <!-- El contenido se genera dinámicamente con JavaScript. -->
                 <tbody id="cuerpoTabla"></tbody>
             </table>
         </div>
     </main>
 
-        <footer class="bg-dark text-light">
-            <div class="container d-flex justify-content-between align-items-center py-4 flex-column flex-lg-row">
-                <div>
-                    <p class="fw-bold mb-1">STAR PARK</p>
-                    <p>©2026 FAMILY PARK S.A.C.</p>
-                </div>
-                <div class="d-flex gap-3 mt-3 mt-lg-0">
-                    <p>Protocolo de Seguridad y Privacidad</p>
-                    <p>Términos de Uso</p>
-                </div>
+    <!-- Pie de página informativo. -->
+    <footer class="bg-dark text-light">
+        <div class="container d-flex justify-content-between align-items-center py-4 flex-column flex-lg-row">
+            <div>
+                <p class="fw-bold mb-1">STAR PARK</p>
+                <p>©2026 FAMILY PARK S.A.C.</p>
             </div>
-        </footer>
+            <div class="d-flex gap-3 mt-3 mt-lg-0">
+                <p>Protocolo de Seguridad y Privacidad</p>
+                <p>Términos de Uso</p>
+            </div>
+        </div>
+    </footer>
 
+    <!-- Bootstrap se carga antes del código propio de reservas. -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+    <!-- reservas.js carga, paga y elimina reservas. -->
     <script src="reservas.js"></script>
 
 </body>

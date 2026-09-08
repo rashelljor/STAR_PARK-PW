@@ -1,25 +1,28 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <!-- Configuración básica de la página. -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Carrito — Star Park</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text x='50%' y='50%' text-anchor='middle' dominant-baseline='central' font-size='80'>🛒</text></svg>"/>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
-        <link rel="stylesheet" href="../../Página principal/Inicio/estilos.css">
-        <link rel="stylesheet" href="carrito.css">
 
+    <!-- Bootstrap aporta componentes y clases reutilizables. -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <!-- Estos archivos contienen los estilos generales y los del carrito. -->
+    <link rel="stylesheet" href="../../Página principal/Inicio/estilos.css">
+    <link rel="stylesheet" href="carrito.css">
 </head>
 <body>
+    <!-- Menú principal compartido por las páginas del proyecto. -->
     <header>
         <nav class="navbar navbar-dark">
             <div class="container-fluid gap-3">
-                <a href="../../Página principal/Inicio/index.html"> <img src="../../img/logostar.png" alt="Star Park Logo" height="48"></a>
+                <a href="../../Página principal/Inicio/index.html">
+                    <img src="../../img/logostar.png" alt="Star Park Logo" height="48">
+                </a>
                 <ul class="navbar-nav flex-row gap-5">
-
-
                     <li class="nav-item dropdown">
-                        <div class="d-flex align-items-center"> 
+                        <div class="d-flex align-items-center">
                             <a class="nav-link" href="../../Página principal/Inicio/index.html">Inicio</a>
                             <button class="btn btn-link dropdown-toggle text-light"
                                 data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mostrar opciones de Inicio"></button>
@@ -32,10 +35,10 @@
                         </ul>
                     </li>
                     <li class="nav-item dropdown">
-                        <div class="d-flex align-items-center"> 
-                        <a class="nav-link" href="../../Página principal/Tienda/tienda.html">Tienda</a>
-                        <button type="button" class="btn btn-link dropdown-toggle dropdown-toggle-split text-light p-0 ms-1"
-                            data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mostrar opciones de Tienda"></button>
+                        <div class="d-flex align-items-center">
+                            <a class="nav-link" href="../../Página principal/Tienda/tienda.html">Tienda</a>
+                            <button type="button" class="btn btn-link dropdown-toggle dropdown-toggle-split text-light p-0 ms-1"
+                                data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mostrar opciones de Tienda"></button>
                         </div>
                         <ul class="dropdown-menu dropdown-menu-dark">
                             <li><a class="dropdown-item" href="../../Página principal/Tienda/tienda.html#promociones">Promociones</a></li>
@@ -49,63 +52,76 @@
                         <a class="nav-link" href="../Compras/miscompras.html">Mis Compras</a>
                     </li>
                 </ul>
+                <!-- Acceso directo a la página actual. -->
                 <a class="btn btn-primary rounded-pill botonAmarillo" href="carrito.html">VER MI CARRITO</a>
             </div>
         </nav>
     </header>
+
+    <!-- Contenido principal del carrito. -->
     <main>
+        <!-- Título y explicación breve de la página. -->
         <div class="seccionCabecera">
             <h2>TU CARRITO</h2>
-            <p class="etiquetaGris">Revisa tu selección y completa tu reserva 🛒</p>
+            <p class="etiquetaGris">Revisa tu selección y completa tu reserva</p>
         </div>
 
+        <!-- Una columna muestra productos y la otra contiene el formulario. -->
         <div class="layoutCarrito">
             <div class="glass bloqueCarrito">
                 <h3>Servicios seleccionados</h3>
+                <!-- carrito.js inserta aquí los productos guardados. -->
                 <div id="listaCarrito"></div>
                 <div class="totalFila">
                     <p>TOTAL</p>
+                    <!-- carrito.js actualiza este valor automáticamente. -->
                     <p class="amarillo" id="totalPrecio">S/ 0.00</p>
                 </div>
             </div>
 
             <div class="glass bloqueCarrito">
                 <h3>Datos para la reserva</h3>
+                <!-- El formulario recoge los datos necesarios para confirmar la reserva. -->
                 <form id="formularioCarrito">
                     <div class="campo">
-                        <label for="nombre">Nombre completo</label>
-                        <input type="text" id="nombre" placeholder="Nombres" required>
+                        <label class="form-label" for="nombre">Nombre completo</label>
+                        <input class="form-control" type="text" id="nombre" placeholder="Nombres" required>
                     </div>
                     <div class="campo">
-                        <label for="correo">Correo</label>
-                        <input type="email" id="correo" placeholder="abc@gmail.com" required>
+                        <label class="form-label" for="correo">Correo</label>
+                        <input class="form-control" type="email" id="correo" placeholder="abc@gmail.com" required>
                     </div>
                     <div class="campo">
-                        <label for="telefono">Teléfono</label>
-                        <input type="tel" id="telefono" placeholder="999 999 999" required>
+                        <label class="form-label" for="telefono">Teléfono</label>
+                        <input class="form-control" type="tel" id="telefono" placeholder="999 999 999" required>
                     </div>
                     <div class="campo">
-                        <label for="fecha">Fecha de visita</label>
-                        <input type="date" id="fecha" required>
+                        <label class="form-label" for="fecha">Fecha de visita</label>
+                        <input class="form-control" type="date" id="fecha" required>
                     </div>
-                    <button type="submit" class="botonAmarillo">✅ Confirmar reserva</button>
+                    <button type="submit" class="btn botonAmarillo">Confirmar reserva</button>
                 </form>
             </div>
         </div>
     </main>
-        <footer class="bg-dark text-light">
-            <div class="container d-flex justify-content-between align-items-center py-4 flex-column flex-lg-row">
-                <div>
-                    <p class="fw-bold mb-1">STAR PARK</p>
-                    <p>©2026 FAMILY PARK S.A.C.</p>
-                </div>
-                <div class="d-flex gap-3 mt-3 mt-lg-0">
-                    <p>Protocolo de Seguridad y Privacidad</p>
-                    <p>Términos de Uso</p>
-                </div>
+
+    <!-- Pie de página informativo. -->
+    <footer class="bg-dark text-light">
+        <div class="container d-flex justify-content-between align-items-center py-4 flex-column flex-lg-row">
+            <div>
+                <p class="fw-bold mb-1">STAR PARK</p>
+                <p>©2026 FAMILY PARK S.A.C.</p>
             </div>
-        </footer>
+            <div class="d-flex gap-3 mt-3 mt-lg-0">
+                <p>Protocolo de Seguridad y Privacidad</p>
+                <p>Términos de Uso</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap se carga antes del código propio de la página. -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+    <!-- carrito.js muestra productos, calcula el total y guarda la reserva. -->
     <script src="carrito.js"></script>
 </body>
 </html>

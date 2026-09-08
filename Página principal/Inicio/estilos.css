@@ -1,333 +1,108 @@
-/* estilos.css — Star Park */
-
+/* 1. CONFIGURACIÓN Y VARIABLES (Colores y Letras) */
 :root {
-    --celeste: #8ce3fd;
-    --amarillo: #ffe121;
-    --fondo: #11131b;
-    --tarjeta: #282a32;
-    --superficie: #191b23;
-    --texto: #e1e2ed;
-    --gris: #c3c6d7;
-    --borde: #434655;
-    --fuente: 'Sora', sans-serif;
+  --celeste: #8ce3fd;
+  --amarillo: #ffe121;
+  --fondo: #11131b;
+  --tarjeta: #282a32;
+  --superficie: #191b23;
+  --texto: #e1e2ed;
+  --gris: #c3c6d7;
+  --borde: #434655;
+  --redondeo: 12px;
+  --ancho: 1280px;
+  --espacio: 24px;
+  --fuente: 'Sora', sans-serif;
 }
 
+/* Ajustes básicos para todos los elementos. */
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-html,
-body {
-    font-family: var(--fuente);
-}
+body { background: var(--fondo); color: var(--texto); font-family: var(--fuente); }
+img { display: block; max-width: 100%; }
 
-body {
-    background-color: var(--fondo);
-    color: var(--texto);
-}
+/* 2. COMPONENTES REUTILIZABLES (Botones, Texto y Tarjetas) */
 
-img {
-    display: block;
-    max-width: 100%;
-}
-
+/* Colores de texto */
 .celeste { color: var(--celeste); }
 .amarillo { color: var(--amarillo); }
 
-.glass {
-    background-color: rgba(29, 31, 39, 0.9);
-    border: 1px solid var(--borde);
-    border-radius: 12px;
-}
+/* Tarjeta básica con fondo y borde */
+.glass { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--redondeo); }
 
-/* --- Botón "Iniciar Misión" --- */
-.botonAmarillo {
-    background-color: var(--amarillo);
-    color: #11131b;
-    padding: 10px 24px;
-    border-radius: 999px;
-    font-weight: 700;
-    font-size: 14px;
-}
+/* Botón principal */
+.botonAmarillo { background: var(--amarillo); color: #11131b; font-size: 14px; font-weight: 700; padding: 10px 24px; border-radius: 999px; display: inline-block; text-decoration: none; }
+.botonAmarillo:hover { background: var(--celeste); }
 
-.botonAmarillo:hover {
-    background-color: var(--celeste);
-    color: #11131b;
-    font-weight: 700;
-    font-size: 14px;
-}
+.etiqueta { border: 1px solid var(--celeste); color: var(--celeste); font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 999px; display: inline-block; }
+.badge { background: var(--celeste); color: #002a78; font-size: 14px; font-weight: 700; padding: 4px 8px; border-radius: 4px; position: absolute; top: 10px; left: 10px; }
 
-/* Navbar dropdown hover */
-.navbar .nav-item.dropdown {
-    position: relative;
-}
+/* 3. ESTRUCTURA DE LA PÁGINA (Secciones y Contenido) */
 
-.navbar .nav-item.dropdown .dropdown-menu {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    margin-top: 0;
-}
+/* Menú de navegación */
+.navbar .nav-item.dropdown { position: relative; }
+.navbar .dropdown-menu { position: absolute; top: 100%; left: 0; display: none; }
+.navbar .nav-item.dropdown:hover .dropdown-menu { display: block; }
 
-.navbar .nav-item.dropdown:hover .dropdown-menu {
-    display: block;
+/* Sección Portada (Hero) */
+.hero { background: #0b0d14; isolation: isolate; position: relative; min-height: 520px; display: flex; align-items: center; height: calc(100svh - 54px); }
+.hero::before {
+  background: linear-gradient(90deg, rgba(8, 10, 16, .94), rgba(8, 10, 16, .72) 34%, rgba(8, 10, 16, .16) 70%, rgba(8, 10, 16, .04));
+  content: '';
+  inset: 0;
+  position: absolute;
+  z-index: 1;
 }
-
-.navbar .nav-item.dropdown:hover > .nav-link,
-.navbar .nav-item.dropdown:hover > .dropdown-toggle {
-    color: var(--amarillo);
+.hero::after {
+  background: linear-gradient(0deg, rgba(17, 19, 27, .9), transparent);
+  bottom: 0;
+  content: '';
+  height: 130px;
+  left: 0;
+  position: absolute;
+  right: 0;
+  z-index: 1;
 }
+.heroFoto { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+.heroContenido { position: relative; max-width: 600px; margin-left: clamp(24px, 6vw, 96px); padding: 52px 0; z-index: 2; }
 
-.navbar .dropdown-menu {
-    margin-top: 0;
-}
+h1 { font-size: clamp(42px, 5vw, 72px); font-weight: 800; line-height: 1.02; margin: 0; }
+h1 em { color: var(--amarillo); font-style: normal; }
+.heroTituloFila { border-left: 3px solid var(--celeste); padding-left: 18px; }
+.subtexto { color: var(--gris); font-size: 18px; line-height: 1.5; margin-top: 18px; max-width: 520px; }
 
-/* --- Sección Principal (Hero) --- */
-.hero {
-    position: relative;
-    min-height: 400px;
-    display: flex;
-    align-items: center;
-}
+/* Contenedor central de la página */
+main { max-width: var(--ancho); margin: 0 auto; padding: 0 48px 60px; }
+section { margin-bottom: 60px; }
 
-.heroFoto {
-    position: relative;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
+.seccionCabecera { background: var(--superficie); border-left: 4px solid var(--celeste); padding: 20px 24px; margin-bottom: 24px; border-radius: 8px; }
 
-.heroContenido {
-    position: absolute;
-    padding: 0 48px;
-}
+/* Organización de las tarjetas (Grillas simples) */
+.grilla3col, .grillaServicios { display: flex; flex-wrap: wrap; gap: var(--espacio); }
+.grillaUbicacion { display: flex; flex-wrap: wrap; gap: var(--espacio); }
 
-.heroTituloFila {
-    margin-bottom: 16px;
-}
+.tarjetaImgCaja { height: 180px; position: relative; border-radius: var(--redondeo); overflow: hidden; margin-bottom: 12px; }
+.tarjetaImgCaja img, .tarjetaServicioImg img, .mapaImagen { width: 100%; height: 100%; object-fit: cover; }
+.grilla3col > *, .grillaServicios > * { flex: 1 1 calc((100% - 48px) / 3); min-width: 0; }
+.grillaUbicacion > * { flex: 1 1 calc((100% - 24px) / 2); min-width: 0; }
+.tarjetaServicio { border-radius: var(--redondeo); display: flex; flex-direction: column; overflow: hidden; }
+.tarjetaServicioImg { height: 180px; }
+.tarjetaServicioTexto { display: flex; flex-direction: column; gap: 10px; padding: 20px; }
+.tarjetaServicioTexto h3, .infoFila h3 { font-size: 20px; font-weight: 700; }
+.tarjetaServicioTexto p, .tarjetaServicioTexto ul, .infoFila div p { color: var(--gris); font-size: 18px; }
+.tarjetaServicioTexto ul { display: flex; flex-direction: column; gap: 6px; list-style: none; }
+.tarjetaInfo { border-radius: var(--redondeo); border-top: 4px solid var(--celeste); display: flex; flex-direction: column; gap: var(--espacio); justify-content: center; padding: 28px; }
+.infoFila { display: flex; gap: 15px; margin-bottom: 15px; }
+.edm { flex: 0 0 105px; font-size: 24px; line-height: 1.25; margin: 0; }
+.infoFila div { flex: 1; min-width: 0; }
+.infoFila h3 { line-height: 1.25; margin: 0 0 4px; }
+.infoFila div p { line-height: 1.45; margin: 0; }
+.tarjetaMapa { border-radius: var(--redondeo); min-height: 280px; overflow: hidden; }
 
-h1 {
-    font-size: 40px;
-    font-weight: 800;
-}
-
-h1 em {
-    font-style: normal;
-    color: var(--amarillo);
-}
-
-.subtexto {
-    color: var(--gris);
-    font-size: 20px;
-    max-width: 500px;
-}
-
-/* --- Etiquetas y Badges --- */
-.etiqueta {
-    max-width: 252px;
-    padding: 4px 14px;
-    border-radius: 999px;
-    border: 1px solid var(--celeste);
-    color: var(--celeste);
-    font-size: 12px;
-    font-weight: 700;
-    margin-bottom: 16px;
-}
-
-.etiquetaGris {
-    color: var(--gris);
-    font-size: 20px;
-    font-weight: 700;
-}
-
-.badge {
-    position: absolute;
-    top: 12px;
-    left: 12px;
-    background-color: var(--celeste);
-    color: #002a78;
-    font-size: 18px;
-    font-weight: 700;
-    padding: 4px 10px;
-    border-radius: 4px;
-}
-
-/* --- Estructura Layout (Main) --- */
-main {
-    padding: 0px 48px;
-    padding-bottom: 60px;
-    max-width: 1280px;
-    margin: 0 auto;
-}
-
-section {
-    margin-bottom: 60px;
-}
-
-.seccionCabecera {
-    padding: 20px 24px;
-    margin-bottom: 24px;
-    background-color: var(--superficie);
-    border: 1px solid var(--borde);
-    border-left: 4px solid var(--celeste);
-    border-radius: 8px;
-}
-
-.seccionCabecera h2 {
-    font-size: 30px;
-    font-weight: 700;
-}
-
-/* --- Grillas Adaptables --- */
-.grilla3col {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 24px;
-}
-
-.grillaServicios {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 24px;
-}
-
-.grillaUbicacion {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-}
-
-/* --- Tarjetas de Atracciones --- */
-.tarjetaAtraccion {
-    margin-bottom: 16px;
-}
-
-.tarjetaImgCaja {
-    position: relative;
-    border-radius: 12px;
-    overflow: hidden;
-    height: 180px;
-    margin-bottom: 12px;
-}
-
-.tarjetaImgCaja img {
-    width: 100%;
-    height: 100%;
-}
-
-.tarjetaAtraccion h3 {
-    font-size: 20px;
-    font-weight: 700;
-    margin-bottom: 6px;
-}
-
-.tarjetaAtraccion p {
-    color: var(--gris);
-    font-size: 18px;
-}
-
-/* --- Tarjetas de Servicios --- */
-.tarjetaServicio {
-    overflow: hidden; 
-    border-radius: 12px;
-    display: flex;
-    flex-direction: column;
-}
-
-.tarjetaServicioImg {
-    height: 180px;
-}
-
-.tarjetaServicioImg img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.tarjetaServicioTexto {
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.tarjetaServicioTexto h3 {
-    font-size: 20px;
-    font-weight: 700;
-}
-
-.tarjetaServicioTexto p, .tarjetaServicioTexto ul {
-    color: var(--gris);
-    font-size: 18px;
-}
-
-.tarjetaServicioTexto ul {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-/* --- Sección Base de Operaciones --- */
-.tarjetaInfo {
-    border-radius: 12px;
-    padding: 28px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 24px;
-    border-top: 4px solid var(--celeste);
-}
-
-.infoFila {
-    display: flex;
-    gap: 14px;
-}
-
-.em {
-    font-size: 24px;
-}
-
-.infoFila h3 {
-    font-size: 20px;
-    font-weight: 700;
-    margin-bottom: 4px;
-}
-
-.infoFila div p {
-    color: var(--gris);
-    font-size: 18px;
-}
-
-/* --- Bloque Contenedor de Imagen Estática del Mapa --- */
-.tarjetaMapa {
-    overflow: hidden;
-    border-radius: 12px;
-    height: 100%;
-    min-height: 280px;
-}
-
-.mapaImagen {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
+/* 4. DISEÑO PARA CELULARES (Responsivo) */
 
 @media (max-width: 800px) {
-    h1 {
-        font-size: 24px;
-    }
-
-    .heroContenido {
-        padding: 0 16px;
-    }
-
-    main {
-        padding: 40px 16px;
-    }
-
-    .grilla3col, .grillaServicios, .grillaUbicacion {
-        grid-template-columns: 1fr;
-    }
-
+  h1 { font-size: 30px; }
+  .heroContenido { margin-left: 16px; padding: 20px 0; }
+  main { padding: 40px 16px; }
+  .grilla3col > *, .grillaServicios > *, .grillaUbicacion > * { flex-basis: 100%; }
 }

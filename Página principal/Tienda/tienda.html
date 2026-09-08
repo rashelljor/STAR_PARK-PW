@@ -1,25 +1,27 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <!-- Configuración básica de la tienda. -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tienda — Star Park</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text x='50%' y='50%' text-anchor='middle' dominant-baseline='central' font-size='80'>✨</text></svg>"/>
+
+    <!-- Bootstrap, estilos generales y estilos propios de la tienda. -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
     <link rel="stylesheet" href="../Inicio/estilos.css">
     <link rel="stylesheet" href="tienda.css">
-
 </head>
 <body>
+    <!-- Menú principal compartido por las páginas del proyecto. -->
     <header>
         <nav class="navbar navbar-dark">
             <div class="container-fluid gap-3">
-                <a href="../Inicio/index.html"> <img src="../../img/logostar.png" alt="Star Park Logo" height="48"></a>
+                <a href="../Inicio/index.html">
+                    <img src="../../img/logostar.png" alt="Star Park Logo" height="48">
+                </a>
                 <ul class="navbar-nav flex-row gap-5">
-
-
                     <li class="nav-item dropdown">
-                        <div class="d-flex align-items-center"> 
+                        <div class="d-flex align-items-center">
                             <a class="nav-link" href="../Inicio/index.html">Inicio</a>
                             <button class="btn btn-link dropdown-toggle text-light"
                                 data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mostrar opciones de Inicio"></button>
@@ -32,10 +34,10 @@
                         </ul>
                     </li>
                     <li class="nav-item dropdown">
-                        <div class="d-flex align-items-center"> 
-                        <a class="nav-link" href="tienda.html">Tienda</a>
-                        <button type="button" class="btn btn-link dropdown-toggle dropdown-toggle-split text-light p-0 ms-1"
-                            data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mostrar opciones de Tienda"></button>
+                        <div class="d-flex align-items-center">
+                            <a class="nav-link" href="tienda.html">Tienda</a>
+                            <button type="button" class="btn btn-link dropdown-toggle dropdown-toggle-split text-light p-0 ms-1"
+                                data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mostrar opciones de Tienda"></button>
                         </div>
                         <ul class="dropdown-menu dropdown-menu-dark">
                             <li><a class="dropdown-item" href="tienda.html#promociones">Promociones</a></li>
@@ -49,25 +51,30 @@
                         <a class="nav-link" href="../../E-commers/Compras/miscompras.html">Mis Compras</a>
                     </li>
                 </ul>
+                <!-- Acceso directo al carrito. -->
                 <a class="btn btn-primary rounded-pill botonAmarillo" href="../../E-commers/Carrito/carrito.html">VER MI CARRITO</a>
             </div>
         </nav>
     </header>
 
+    <!-- Portada visual de la tienda. -->
     <section id="inicio" class="hero">
         <img src="../../img/portada02.png" alt="Galaxia con planetas y naves espaciales" class="heroFoto">
     </section>
 
-    <main>              
+    <!-- Contenido principal y catálogo de productos. -->
+    <main>
+        <!-- Productos promocionales. -->
         <div id="promociones" class="seccionCabecera">
             <h2>PROMOCIONES GALÁCTICAS</h2>
-            <p class="etiquetaGris">Promociones, descuentos y recompensas especiales. 🚀</p>
+            <p class="etiquetaGris">Promociones, descuentos y recompensas especiales.</p>
         </div>
+        <!-- Cada tarjeta contiene imagen, descripción, precio y botón. -->
         <div class="grillaTienda">
             <div class="tarjetaServicio">
                 <img src="../../img/vis02.png" alt="Niños en el trampolín, Aventura Espacial">
                 <div class="info">
-                    <h3>🧑‍🚀 Exploradores Espaciales</h3>
+                    <h3>Exploradores Espaciales</h3>
                     <p>3 tickets para ingresar a "Aventura espacial" por 20 minutos</p>
                     <p>S/ 45.00</p>
                     <button type="button" onclick="agregarAlCarrito('Combo 3 Exploradores Espaciales', 45)">
@@ -78,7 +85,7 @@
             <div class="tarjetaServicio">
                 <img src="../../img/vis03.png" alt="área de tobogán y columpios, Misión Marciana">
                 <div class="info">
-                    <h3>👽 Astronautas en Marte</h3>
+                    <h3>Astronautas en Marte</h3>
                     <p>2 tickets para ingresar a "Misión Marciana" por 30 minutos</p>
                     <p>S/ 40.00</p>
                     <button type="button" onclick="agregarAlCarrito('Combo 2Astronautas en Marte', 40)">
@@ -99,9 +106,10 @@
             </div>
         </div><br>
 
+        <!-- Productos individuales de las atracciones. -->
         <div id="botin" class="seccionCabecera">
             <h2>BOTÍN ESPACIAL</h2>
-            <p class="etiquetaGris">Elige tu misión y añádela al carrito 🚀</p>
+            <p class="etiquetaGris">Elige tu misión y añádela al carrito</p>
         </div>
 
         <div class="grillaTienda">
@@ -179,20 +187,23 @@
         </div>
     </main>
 
-       <footer class="bg-dark text-light">
-            <div class="container d-flex justify-content-between align-items-center py-4 flex-column flex-lg-row">
-                <div>
-                    <p class="fw-bold mb-1">STAR PARK</p>
-                    <p>©2026 FAMILY PARK S.A.C.</p>
-                </div>
-                <div class="d-flex gap-3 mt-3 mt-lg-0">
-                    <p>Protocolo de Seguridad y Privacidad</p>
-                    <p>Términos de Uso</p>
-                </div>
+    <!-- Pie de página informativo. -->
+    <footer class="bg-dark text-light">
+        <div class="container d-flex justify-content-between align-items-center py-4 flex-column flex-lg-row">
+            <div>
+                <p class="fw-bold mb-1">STAR PARK</p>
+                <p>©2026 FAMILY PARK S.A.C.</p>
             </div>
-        </footer>
+            <div class="d-flex gap-3 mt-3 mt-lg-0">
+                <p>Protocolo de Seguridad y Privacidad</p>
+                <p>Términos de Uso</p>
+            </div>
+        </div>
+    </footer>
 
+    <!-- Bootstrap habilita los menús desplegables. -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+    <!-- tienda.js guarda los productos seleccionados en el carrito. -->
     <script src="tienda.js"></script>
 
 </body>

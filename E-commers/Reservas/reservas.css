@@ -1,24 +1,28 @@
-/* admin.css */
+/* Estilos exclusivos del panel de reservas. */
 
+/* Contenedor principal de la página. */
 main {
-    padding: 40px 48px 60px 48px;
     max-width: 1280px;
     margin: 0 auto;
+    padding: 40px 48px 60px;
 }
 
+/* Bloque que contiene la tabla de reservas. */
 .bloqueAdmin {
     margin-top: 24px;
-    padding: 28px;
     overflow-x: auto;
+    padding: 28px;
 }
 
+/* La tabla ocupa todo el ancho disponible. */
 table {
-    width: 100%;
     border-collapse: collapse;
+    width: 100%;
 }
 
+/* Encabezados de las columnas. */
 table th {
-    background-color: #67a6cc;
+    background: #67a6cc;
     color: white;
     font-size: 13px;
     font-weight: 700;
@@ -26,54 +30,54 @@ table th {
     text-align: left;
 }
 
+/* Celdas con información de cada reserva. */
 table td {
-    padding: 12px 16px;
-    font-size: 13px;
     border-bottom: 1px solid var(--borde);
     color: var(--gris);
+    font-size: 13px;
+    padding: 12px 16px;
 }
 
-table tr:nth-child(even) {
-    background-color: var(--tarjeta);
-}
+/* Alterna el fondo de las filas para facilitar la lectura. */
+table tr:nth-child(even) { background: var(--tarjeta); }
+table tr:hover { background: var(--superficie); }
 
-table tr:hover {
-    background-color: var(--superficie);
-}
-
+/* Botón para eliminar una reserva. */
 .botonEliminar {
-    background-color: transparent;
-    color: #ff6b6b;
+    background: transparent;
     border: 1px solid #ff6b6b;
     border-radius: 6px;
-    padding: 4px 10px;
-    font-size: 12px;
-    font-weight: 700;
+    color: #ff6b6b;
     cursor: pointer;
     font-family: var(--fuente);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 10px;
 }
 
 .botonEliminar:hover {
-    background-color: rgba(255, 107, 107, 0.15);
+    background: rgba(255, 107, 107, 0.15);
 }
 
+/* Botón para marcar una reserva como pagada. */
 .botonPagar {
-    background-color: transparent;
-    color: var(--celeste);
+    background: transparent;
     border: 1px solid var(--celeste);
     border-radius: 6px;
-    padding: 4px 10px;
-    font-size: 12px;
-    font-weight: 700;
+    color: var(--celeste);
     cursor: pointer;
     font-family: var(--fuente);
+    font-size: 12px;
+    font-weight: 700;
     margin-right: 6px;
+    padding: 4px 10px;
 }
 
 .botonPagar:hover {
-    background-color: rgba(140, 227, 253, 0.15);
+    background: rgba(140, 227, 253, 0.15);
 }
 
+/* En pantallas pequeñas se reducen los márgenes laterales. */
 @media (max-width: 800px) {
     main {
         padding: 40px 16px;
