@@ -1,0 +1,34 @@
+type User @table {
+  email: String!
+  role: String!
+  fullName: String!
+  phoneNumber: String
+}
+
+type Child @table {
+  name: String!
+  birthDate: Date!
+  parent: User!
+}
+
+type PlaySession @table {
+  startTime: Timestamp!
+  endTime: Timestamp!
+  maxCapacity: Int!
+  description: String
+}
+
+type Reservation @table {
+  reservationDate: Date!
+  numberOfChildren: Int!
+  status: String!
+  user: User!
+  playSession: PlaySession!
+}
+
+type PaymentRecord @table {
+  amount: Float!
+  paymentDate: Timestamp!
+  transactionStatus: String!
+  reservation: Reservation!
+}

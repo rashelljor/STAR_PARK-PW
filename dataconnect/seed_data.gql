@@ -1,0 +1,31 @@
+mutation SeedData @transaction {
+  user_insertMany(data: [
+    { id: "e6f8d0a1-0000-4000-a000-000000000001", email: "alice@example.com", role: "parent", fullName: "Alice Smith" },
+    { id: "e6f8d0a1-0000-4000-a000-000000000002", email: "bob@example.com", role: "parent", fullName: "Bob Jones" },
+    { id: "e6f8d0a1-0000-4000-a000-000000000003", email: "charlie@example.com", role: "parent", fullName: "Charlie Brown" }
+  ])
+  
+  child_insertMany(data: [
+    { name: "Daisy Smith", birthDate: "2018-05-15", parentId: "e6f8d0a1-0000-4000-a000-000000000001" },
+    { name: "Ethan Jones", birthDate: "2020-02-20", parentId: "e6f8d0a1-0000-4000-a000-000000000002" },
+    { name: "Fiona Brown", birthDate: "2019-11-10", parentId: "e6f8d0a1-0000-4000-a000-000000000003" }
+  ])
+  
+  playSession_insertMany(data: [
+    { startTime: "2024-10-01T09:00:00Z", endTime: "2024-10-01T11:00:00Z", maxCapacity: 10, description: "Morning Toddler Play" },
+    { startTime: "2024-10-01T13:00:00Z", endTime: "2024-10-01T15:00:00Z", maxCapacity: 15, description: "Afternoon Adventure" },
+    { startTime: "2024-10-02T10:00:00Z", endTime: "2024-10-02T12:00:00Z", maxCapacity: 8, description: "Weekend Kickoff" }
+  ])
+  
+  reservation_insertMany(data: [
+    { reservationDate: "2024-10-01", numberOfChildren: 1, status: "confirmed", userId: "e6f8d0a1-0000-4000-a000-000000000001", playSessionId: "e6f8d0a1-0000-4000-a000-000000000001" },
+    { reservationDate: "2024-10-01", numberOfChildren: 2, status: "pending", userId: "e6f8d0a1-0000-4000-a000-000000000002", playSessionId: "e6f8d0a1-0000-4000-a000-000000000002" },
+    { reservationDate: "2024-10-02", numberOfChildren: 1, status: "confirmed", userId: "e6f8d0a1-0000-4000-a000-000000000003", playSessionId: "e6f8d0a1-0000-4000-a000-000000000003" }
+  ])
+  
+  paymentRecord_insertMany(data: [
+    { amount: 25.0, paymentDate: "2024-09-25T10:00:00Z", transactionStatus: "paid", reservationId: "e6f8d0a1-0000-4000-a000-000000000001" },
+    { amount: 50.0, paymentDate: "2024-09-26T11:00:00Z", transactionStatus: "pending", reservationId: "e6f8d0a1-0000-4000-a000-000000000002" },
+    { amount: 25.0, paymentDate: "2024-09-27T09:30:00Z", transactionStatus: "paid", reservationId: "e6f8d0a1-0000-4000-a000-000000000003" }
+  ])
+}

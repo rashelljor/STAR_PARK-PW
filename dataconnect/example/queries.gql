@@ -1,0 +1,145 @@
+mutation CreateUser($email: String!, $fullName: String!, $role: String!) @auth(level: USER) {
+  user_insert(data: {id_expr: "auth.uid", email: $email, fullName: $fullName, role: $role})
+}
+
+mutation UpdateUser($fullName: String) @auth(level: USER) {
+  user_update(key: {id_expr: "auth.uid"}, data: {fullName: $fullName})
+}
+
+mutation DeleteUser @auth(level: USER) {
+  user_delete(key: {id_expr: "auth.uid"})
+}
+
+query GetUser @auth(level: USER) {
+  user(key: {id_expr: "auth.uid"}) {
+    email
+    fullName
+    role
+  }
+}
+
+query ListUsers @auth(level: PUBLIC, insecureReason: "Listing user profiles is required for directory functionality.") {
+  users {
+    id
+    fullName
+    role
+  }
+}
+
+mutation CreateChild($name: String!, $birthDate: Date!) @auth(level: USER) {
+  child_insert(data: {name: $name, birthDate: $birthDate, parentId_expr: "auth.uid"})
+}
+
+mutation UpdateChild($id: UUID!, $name: String) @auth(level: USER) {
+  child_update(key: {id: $id}, data: {name: $name})
+}
+
+mutation DeleteChild($id: UUID!) @auth(level: USER) {
+  child_delete(key: {id: $id})
+}
+
+query GetChild($id: UUID!) @auth(level: USER) {
+  child(key: {id: $id}) {
+    name
+    birthDate
+    parent {
+      fullName
+    }
+  }
+}
+
+query ListMyChildren @auth(level: USER) {
+  children(where: {parentId: {eq_expr: "auth.uid"}}) {
+    id
+    name
+    birthDate
+  }
+}
+
+mutation CreatePlaySession($startTime: Timestamp!, $endTime: Timestamp!, $maxCapacity: Int!, $description: String) @auth(level: PUBLIC, insecureReason: "Play sessions are public info.") {
+  playSession_insert(data: {startTime: $startTime, endTime: $endTime, maxCapacity: $maxCapacity, description: $description})
+}
+
+mutation UpdatePlaySession($id: UUID!, $maxCapacity: Int) @auth(level: PUBLIC, insecureReason: "Session adjustments are public info.") {
+  playSession_update(key: {id: $id}, data: {maxCapacity: $maxCapacity})
+}
+
+mutation DeletePlaySession($id: UUID!) @auth(level: PUBLIC, insecureReason: "Session removal is public info.") {
+  playSession_delete(key: {id: $id})
+}
+
+query GetPlaySession($id: UUID!) @auth(level: PUBLIC, insecureReason: "Session details are public info.") {
+  playSession(key: {id: $id}) {
+    startTime
+    endTime
+    maxCapacity
+  }
+}
+
+query ListPlaySessions @auth(level: PUBLIC, insecureReason: "Listing sessions is required for booking.") {
+  playSessions {
+    id
+    startTime
+    endTime
+  }
+}
+
+mutation CreateReservation($reservationDate: Date!, $numberOfChildren: Int!, $playSessionId: UUID!) @auth(level: USER) {
+  reservation_insert(data: {reservationDate: $reservationDate, numberOfChildren: $numberOfChildren, playSessionId: $playSessionId, userId_expr: "auth.uid", status: "PENDING"})
+}
+
+mutation UpdateReservationStatus($id: UUID!, $status: String!) @auth(level: USER) {
+  reservation_update(key: {id: $id}, data: {status: $status})
+}
+
+mutation DeleteReservation($id: UUID!) @auth(level: USER) {
+  reservation_delete(key: {id: $id})
+}
+
+query GetReservation($id: UUID!) @auth(level: USER) {
+  reservation(key: {id: $id}) {
+    reservationDate
+    status
+    playSession {
+      startTime
+    }
+  }
+}
+
+query ListMyReservations @auth(level: USER) {
+  reservations(where: {userId: {eq_expr: "auth.uid"}}) {
+    id
+    reservationDate
+    status
+  }
+}
+
+mutation CreatePaymentRecord($amount: Float!, $reservationId: UUID!) @auth(level: USER) {
+  paymentRecord_insert(data: {amount: $amount, paymentDate_expr: "request.time", transactionStatus: "SUCCESS", reservationId: $reservationId})
+}
+
+mutation UpdatePaymentStatus($id: UUID!, $transactionStatus: String!) @auth(level: USER) {
+  paymentRecord_update(key: {id: $id}, data: {transactionStatus: $transactionStatus})
+}
+
+mutation DeletePaymentRecord($id: UUID!) @auth(level: USER) {
+  paymentRecord_delete(key: {id: $id})
+}
+
+query GetPaymentRecord($id: UUID!) @auth(level: USER) {
+  paymentRecord(key: {id: $id}) {
+    amount
+    transactionStatus
+    reservation {
+      id
+    }
+  }
+}
+
+query ListMyPayments @auth(level: USER) {
+  paymentRecords(where: {reservation: {userId: {eq_expr: "auth.uid"}}}) {
+    id
+    amount
+    transactionStatus
+  }
+}
