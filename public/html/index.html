@@ -5,10 +5,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Star Park</title>
-
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text x='50%' y='50%' text-anchor='middle' dominant-baseline='central' font-size='80'>🌟</text></svg>"/>
     <!-- Bootstrap y estilos propios del sitio. -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
-    <link rel="stylesheet" href="../css/estilos.css">
+    <!-- Estilos personalizados -->
+    <link rel="stylesheet" href="../assets/css/global.css">
+    <link rel="stylesheet" href="../assets/css/componentes.css">
+    <link rel="stylesheet" href="../assets/css/inicio.css">
 </head>
 
 <body>
@@ -17,7 +20,7 @@
         <nav class="navbar navbar-dark">
             <div class="container-fluid gap-3">
                 <a href="index.html">
-                    <img src="../../img/logostar.png" alt="Star Park Logo" height="48">
+                    <img src="../assets/img/logostar.png" alt="Star Park Logo" height="48">
                 </a>
                 <ul class="navbar-nav flex-row gap-5">
                     <li class="nav-item dropdown">
@@ -26,7 +29,6 @@
                             <button class="btn btn-link dropdown-toggle text-light"
                                 data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mostrar opciones de Inicio"></button>
                         </div>
-
                         <ul class="dropdown-menu dropdown-menu-dark ">
                             <li><a class="dropdown-item" href="index.html#atracciones">Atracciones</a></li>
                             <li><a class="dropdown-item" href="index.html#servicios">Servicios</a></li>
@@ -35,39 +37,58 @@
                     </li>
                     <li class="nav-item dropdown">
                         <div class="d-flex align-items-center">
-                            <a class="nav-link" href="../Tienda/tienda.html">Tienda</a>
+                            <a class="nav-link" href="tienda.html">Tienda</a>
                             <button type="button" class="btn btn-link dropdown-toggle dropdown-toggle-split text-light p-0 ms-1"
                                 data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mostrar opciones de Tienda"></button>
                         </div>
                         <ul class="dropdown-menu dropdown-menu-dark">
-                            <li><a class="dropdown-item" href="../Tienda/tienda.html#promociones">Promociones</a></li>
-                            <li><a class="dropdown-item" href="../Tienda/tienda.html#botin">Botín Espacial</a></li>
+                            <li><a class="dropdown-item" href="tienda.html#promociones">Promociones</a></li>
+                            <li><a class="dropdown-item" href="tienda.html#botin">Botín Espacial</a></li>
                         </ul>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="../../E-commers/Reservas/reservas.html">Mis Reservas</a>
+                        <a class="nav-link" href="reservas.html">Mis Reservas</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="../../E-commers/Compras/miscompras.html">Mis Compras</a>
+                        <a class="nav-link" href="miscompras.html">Mis Compras</a>
+                    </li>
+                    <li class="nav-item">
+                        <div class="d-flex align-items-center">
+                            <a class="nav-link" href="conocenos.html">Conócenos</a>
+                            <button type="button" class="btn btn-link dropdown-toggle dropdown-toggle-split text-light p-0 ms-1"
+                                data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mostrar opciones de Conócenos"></button>
+                        </div>
+                        <ul class="dropdown-menu dropdown-menu-dark">
+                            <li><a class="dropdown-item" href="conocenos.html#historia">Historia</a></li>
+                            <li><a class="dropdown-item" href="conocenos.html#mivi">Misión y Visión</a></li>
+                            <li><a class="dropdown-item" href="conocenos.html#objetivos">Objetivos</a></li>
+                        </ul>
                     </li>
                 </ul>
-                <!-- Enlace directo al carrito. -->
-                <a class="btn btn-primary rounded-pill botonAmarillo" href="../../E-commers/Carrito/carrito.html">VER MI CARRITO</a>
+                <div>
+                    <!-- Enlace directo al carrito. -->
+                    <a class="btn btn-primary rounded-pill botonAmarillo d-inline-flex align-items-center gap-2" href="carrito.html"><img src="../assets/img/iconcarrito.png" alt="Carrito" class="icono-boton">Ver mi carrito</a>
+                    <!-- Enlace directo al log in. -->
+                    <a class="btn btn-primary rounded-pill botonAmarillo" href="login.html">👤 Iniciar sesión</a>
+                </div>                
             </div>
         </nav>
     </header>
     <!-- Portada principal con imagen y mensaje de bienvenida. -->
     <section id="inicio" class="hero">
-        <img src="../../img/portada.png" alt="2 jóvenes jugando en el AirGame, Star Park" class="heroFoto">
-        <div class="heroContenido">
-            <p class="etiqueta">¡Destino galáctico #1 en Huancayo!</p>
-            <div class="heroTituloFila">
-                <h1>TU AVENTURA ESPACIAL,<br><em>Comienza Aquí</em></h1>
+        <img src="../assets/img/portada.png" alt="2 jóvenes jugando en el AirGame, Star Park" class="heroFoto">
+        <div class="heroContenido" class="d-flex flex-row align-items-center">
+            <img src="../assets/img/astro01.png" alt="Carrito">
+            <div class="heroContenido"> 
+                <p class="etiqueta">¡Destino galáctico #1 en Huancayo!</p>
+                <div class="heroTituloFila">
+                    <h1>TU AVENTURA ESPACIAL,<br><em>Comienza Aquí</em></h1>
+                </div>
+                <p class="subtexto">
+                    Bienvenidos al centro de juegos mecánicos y arcade más emocionante de Huancayo. <br>
+                    ¡Regístrate como un nuevo astronauta y recibe tu primera misión!
+                </p>
             </div>
-            <p class="subtexto">
-                Bienvenidos al centro de juegos mecánicos y arcade más emocionante de Huancayo.
-                ¡Regístrate como un nuevo astronauta y recibe tu primera misión!
-            </p>
         </div>
     </section>
     
@@ -82,7 +103,7 @@
             <div class="grilla3col">
                 <div class="tarjetaAtraccion">
                     <div class="tarjetaImgCaja">
-                        <img src="../../img/aventuraespacial01.png" alt="Área de juegos, Aventura Espacial">
+                        <img src="../assets/img/aventuraespacial01.png" alt="Área de juegos, Aventura Espacial">
                         <div class="badge">INFANTIL</div>
                     </div>
                     <h3 class="celeste" >AVENTURA ESPACIAL</h3>
@@ -91,7 +112,7 @@
 
                 <div class="tarjetaAtraccion">
                     <div class="tarjetaImgCaja">
-                        <img src="../../img/misionmarciana01.png" alt="Piscina de pelotas y sensores, Misión Marciana">
+                        <img src="../assets/img/misionmarciana01.png" alt="Piscina de pelotas y sensores, Misión Marciana">
                         <div class="badge">INFANTIL</div>
                     </div>
                     <h3 class="celeste">MISIÓN MARCIANA</h3>
@@ -100,7 +121,7 @@
 
                 <div class="tarjetaAtraccion">
                     <div class="tarjetaImgCaja">
-                        <img src="../../img/maquinas.png" alt="Juegos Arcade">
+                        <img src="../assets/img/maquinas.png" alt="Juegos Arcade">
                         <div class="badge">FAMILIAR</div>
                     </div>
                     <h3 class="celeste">JUEGOS ARCADE</h3>
@@ -118,7 +139,7 @@
             <div class="grillaServicios">
                 <div class="tarjetaServicio glass">
                     <div class="tarjetaServicioImg">
-                        <img src="../../img/confiteria.png" alt="Área de Confitería">
+                        <img src="../assets/img/confiteria.png" alt="Área de Confitería">
                     </div>
                     <div class="tarjetaServicioTexto">
                         <h3 class="celeste">Snacks Premium Aero-espaciales</h3>
@@ -128,7 +149,7 @@
 
                 <div class="tarjetaServicio glass">
                     <div class="tarjetaServicioImg">
-                        <img src="../../img/vitrina.png" alt="Vitrina de juguetes y artículos con temática espacial">
+                        <img src="../assets/img/vitrina.png" alt="Vitrina de juguetes y artículos con temática espacial">
                     </div>
                     <div class="tarjetaServicioTexto">
                         <h3 class="celeste">Bazar Intergaláctico</h3>
@@ -138,7 +159,7 @@
 
                 <div class="tarjetaServicio glass">
                     <div class="tarjetaServicioImg">
-                        <img src="../../img/cumpleaños.png" alt="Cumpleaños Espaciales, ejemplo de decoración y animación">
+                        <img src="../assets/img/cumpleaños.png" alt="Cumpleaños Espaciales, ejemplo de decoración y animación">
                     </div>
                     <div class="tarjetaServicioTexto">
                         <h3 class="celeste">Cumpleaños Espaciales</h3>
@@ -162,7 +183,6 @@
             <div class="grillaUbicacion">
                 <div class="tarjetaInfo glass">
                     <div class="infoFila">
-                        <p class="em">Ubicación</p>
                         <div>
                             <h3 class="celeste">Ubicación Estelar</h3>
                             <p>Sótano del Centro Comiccial Constitución, Calle Real 475, Huancayo, Junín - Perú</p>
@@ -170,7 +190,6 @@
                     </div>
                     
                     <div class="infoFila">
-                        <p class="em">Horario</p>
                         <div>
                             <h3 class="amarillo">Horario de Operaciones</h3>
                             <p>Lun a Vie: 11:00 AM - 10:00 PM<br>Sáb a Dom: 10:00 AM - 10:00 PM</p>
@@ -178,7 +197,6 @@
                     </div>
 
                     <div class="infoFila">
-                        <p class="em">Contacto</p>
                         <div>
                             <h3 class="celeste">Contacto Galáctico</h3>
                             <p>997 289 333 | pqcentralpark@gmail.com</p>
@@ -187,11 +205,10 @@
                 </div>
 
                 <div class="tarjetaMapa glass">
-                    <img src="../../img/mapa_huancayo.png" alt="Mapa Ubicación Star Park, Huancayo" class="mapaImagen">
+                    <img src="../assets/img/mapa_huancayo.png" alt="Mapa Ubicación Star Park, Huancayo" class="mapaImagen">
                 </div>
             </div>
         </section>
-
     </main>
 
     <!-- Pie de página informativo. -->
