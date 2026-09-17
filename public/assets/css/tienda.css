@@ -1,45 +1,5 @@
 /* Estilos exclusivos de la página de la tienda. */
 
-/* Contenedor principal: centra el contenido y deja espacio alrededor. */
-main {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 40px 60px;
-}
-
-/* Distribuye los productos en tres columnas. */
-.grillaTienda {
-    gap: 24px;
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-}
-
-/* Borde y forma general de cada producto. */
-.tarjetaServicio {
-    border: 1px solid var(--borde);
-    border-radius: 12px;
-}
-
-/* Imagen del producto con una altura uniforme. */
-.tarjetaServicio img {
-    height: 160px;
-    object-fit: cover;
-    width: 100%;
-}
-
-/* Información del producto y separación entre sus elementos. */
-.tarjetaServicio .info {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 16px;
-}
-
-/* Tamaño de las descripciones y precios. */
-.tarjetaServicio p {
-    font-size: 18px;
-}
-
 /* Botón para añadir el producto al carrito. */
 .tarjetaServicio button {
     background: var(--amarillo);
@@ -50,13 +10,11 @@ main {
     padding: 10px;
 }
 
-/* En móviles, los productos se muestran en una sola columna. */
-@media (max-width: 800px) {
-    main {
-        padding: 40px 16px;
-    }
-
-    .grillaTienda {
-        grid-template-columns: 1fr;
-    }
+.tarjetaAtraccion button {
+    background: var(--celeste);
+    border: 0;
+    border-radius: 8px;
+    color: rgba(17, 18, 59, 0.837);
+    cursor: pointer;
+    padding: 10px;
 }

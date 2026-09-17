@@ -18,7 +18,29 @@
 /* Ajustes básicos para todos los elementos */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-body { background: var(--fondo); color: var(--texto); font-family: var(--fuente); }
+html, body {
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--fondo); 
+  
+  /* Sintaxis limpia de fondo completo */
+  background-image: 
+    linear-gradient(rgba(17, 19, 27, 0.716), rgba(17, 19, 27, 0.746)), 
+    url('../img/fondo.png'); 
+
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  
+  color: var(--texto); 
+  font-family: var(--fuente); 
+}
+
 img { display: block; max-width: 100%; }
 
 /* Utilidades de texto */
@@ -34,6 +56,17 @@ section { margin-bottom: 60px; }
 .grillaUbicacion { display: flex; flex-wrap: wrap; gap: var(--espacio); }
 .grilla3col > *, .grillaServicios > * { flex: 1 1 calc((100% - 48px) / 3); min-width: 0; }
 .grillaUbicacion > * { flex: 1 1 calc((100% - 24px) / 2); min-width: 0; }
+
+h1 { font-size: clamp(42px, 5vw, 72px); font-weight: 800; line-height: 1.02; margin: 0;color: #ffffff; text-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+h1 em { color: var(--amarillo); font-style: normal;}
+.heroTituloFila { border-left: 4px solid var(--celeste); padding-left: 18px; position: relative;}
+.subtexto { color: var(--gris); font-size: 18px; line-height: 1.5; margin-top: 18px; max-width: 520px; }
+
+p, li {
+  color: var(--gris);
+  font-size: 16px;
+  line-height: 1.5;
+}
 
 /* Responsivo Global */
 @media (max-width: 800px) {

@@ -10,7 +10,49 @@
 .badge { background: var(--celeste); color: var(--azul); font-size: 14px; font-weight: 700; padding: 4px 8px; border-radius: 4px; position: absolute; top: 10px; left: 10px; }
 
 /* Encabezados de sección reutilizables */
-.seccionCabecera { background: var(--superficie); border-left: 4px solid var(--celeste); padding: 20px 24px; margin-bottom: 24px; border-radius: 8px; }
+.seccionCabecera {
+  background: linear-gradient(135deg, rgba(40, 42, 50, 0.6) 0%, rgba(25, 27, 35, 0.9) 100%);
+  border-top: 5px solid var(--celeste);
+  padding: 24px 28px;
+  margin-bottom: 32px;
+  border-radius: var(--redondeo);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+}
+
+.seccionCabecera h2 {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #fff;
+  margin: 4px 0;
+}
+
+.etiquetaGris {
+  color: var(--gris);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* Badges estilizados */
+.badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 6px 12px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  z-index: 3;
+  background: var(--amarillo);
+  color: #0b0d14;
+}
 
 /* Menú de Navegación */
 .navbar .nav-item.dropdown { position: relative; }
@@ -18,19 +60,64 @@
 .navbar .nav-item.dropdown:hover .dropdown-menu { display: block; }
 .icono-boton { width: 18px; height: 18px; object-fit: contain;}
 
-/* Tarjetas */
-.tarjetaImgCaja { height: 180px; position: relative; border-radius: var(--redondeo); overflow: hidden; margin-bottom: 12px; }
-.tarjetaImgCaja img, .tarjetaServicioImg img, .mapaImagen { width: 100%; height: 100%; object-fit: cover; }
-.tarjetaServicio { border-radius: var(--redondeo); display: flex; flex-direction: column; overflow: hidden; }
-.tarjetaServicioImg { height: 180px; }
-.tarjetaServicioTexto { display: flex; flex-direction: column; gap: 10px; padding: 20px; }
-.tarjetaServicioTexto h3, .infoFila h3 { font-size: 20px; font-weight: 700; }
-.tarjetaServicioTexto p, .tarjetaServicioTexto ul, .infoFila div p { color: var(--gris); font-size: 18px; }
-.tarjetaServicioTexto ul { display: flex; flex-direction: column; gap: 6px; list-style: none; }
-.tarjetaInfo { border-radius: var(--redondeo); border-top: 4px solid var(--celeste); display: flex; flex-direction: column; gap: var(--espacio); justify-content: center; padding: 28px; }
-.infoFila { display: flex; gap: 15px; margin-bottom: 15px; }
-.edm { flex: 0 0 105px; font-size: 24px; line-height: 1.25; margin: 0; }
-.infoFila div { flex: 1; min-width: 0; }
-.infoFila h3 { line-height: 1.25; margin: 0 0 4px; }
-.infoFila div p { line-height: 1.45; margin: 0; }
-.tarjetaMapa { border-radius: var(--redondeo); min-height: 280px; overflow: hidden; }
+/* Tarjeta de Atracción */
+.tarjetaAtraccion {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--redondeo);
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  border: 1px solid var(--borde);
+}
+
+.tarjetaAtraccion:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 25px rgba(140, 227, 253, 0.15);
+  border-color: var(--celeste);
+}
+
+.tarjetaServicio {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--redondeo);
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  border: 1px solid var(--borde);
+}
+
+.tarjetaServicio:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 25px #3c2f00;
+  border-color: var(--amarillo);
+}
+
+.tarjetaCuerpo {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-grow: 1;
+}
+
+.tarjetaCuerpo h3 {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* Efecto Zoom en Imágenes */
+.tarjetaImgCaja {
+  height: 200px;
+  position: relative;
+  overflow: hidden;
+}
+
+.tarjetaImgCaja img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.tarjetaAtraccion:hover .tarjetaImgCaja img {
+  transform: scale(1.08);
+}

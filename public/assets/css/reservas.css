@@ -1,12 +1,5 @@
 /* Estilos exclusivos del panel de reservas. */
 
-/* Contenedor principal de la página. */
-main {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 40px 48px 60px;
-}
-
 /* Bloque que contiene la tabla de reservas. */
 .bloqueAdmin {
     margin-top: 24px;
