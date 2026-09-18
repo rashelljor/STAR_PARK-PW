@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <!-- Configuración básica del documento. -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear cuenta — Star Park</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text x='50%' y='50%' text-anchor='middle' dominant-baseline='central' font-size='80'>📝</text></svg>"/>
+    <!-- Bootstrap y estilos generales del proyecto. -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="../assets/css/global.css">
+    <link rel="stylesheet" href="../assets/css/componentes.css">
+    </head>
+<body>
+    <!-- Menú principal compartido por las páginas del proyecto. -->
+    <header class="bg-dark">
+        <nav class="navbar navbar-dark">
+            <div class="container-fluid gap-3">
+                <a href="index.html">
+                    <img src="../assets/img/logostar.png" alt="Star Park Logo" height="48">
+                </a>
+                <ul class="navbar-nav flex-row gap-5">
+                    <li class="nav-item dropdown">
+                        <div class="d-flex align-items-center">
+                            <a class="nav-link" href="index.html">Inicio</a>
+                            <button class="btn btn-link dropdown-toggle text-light"
+                                data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mostrar opciones de Inicio"></button>
+                        </div>
+                        <ul class="dropdown-menu dropdown-menu-dark ">
+                            <li><a class="dropdown-item" href="index.html#atracciones">Atracciones</a></li>
+                            <li><a class="dropdown-item" href="index.html#servicios">Servicios</a></li>
+                            <li><a class="dropdown-item" href="index.html#base-operaciones">Ubicación y Horarios</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <div class="d-flex align-items-center">
+                            <a class="nav-link" href="tienda.html">Tienda</a>
+                            <button type="button" class="btn btn-link dropdown-toggle dropdown-toggle-split text-light p-0 ms-1"
+                                data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mostrar opciones de Tienda"></button>
+                        </div>
+                        <ul class="dropdown-menu dropdown-menu-dark">
+                            <li><a class="dropdown-item" href="tienda.html#promociones">Promociones</a></li>
+                            <li><a class="dropdown-item" href="tienda.html#botin">Botín Espacial</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="reservas.html">Mis Reservas</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="miscompras.html">Mis Compras</a>
+                    </li>
+                </ul>
+                <div>
+                    <!-- Enlace directo al carrito. -->
+                    <a class="btn btn-primary rounded-pill botonAmarillo d-inline-flex align-items-center gap-2" href="carrito.html"><img src="../assets/img/iconcarrito.png" alt="Carrito" class="icono-boton">Ver mi carrito</a>
+                    <!-- Enlace directo al log in. -->
+                    <a class="btn btn-primary rounded-pill botonAmarillo" href="login.html">👤 Iniciar sesión</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Contenido principal: formulario de registro. -->
+    <main>
+        <div class="text-center text-white p-5">
+            <h1>CREA TU CUENTA EN <br><em class="celeste">STAR</em> <em>PARK</em></h1><br>
+            <p class="etiqueta">Únete a la tripulación</p>
+        </div>
+
+        <section id="registroForm">
+            <div class="bloqueFormulario glass">
+                <form id="formRegistro" novalidate>
+                    <div class="campo">
+                        <label class="form-label amarillo" for="correo">Correo electrónico</label>
+                        <input type="email" id="correo" name="correo" autocomplete="email" placeholder="abc@gmail.com" required>
+                        <p class="mensajeError" id="errorCorreo" role="alert"></p>
+                    </div>
+
+                    <div class="campo">
+                        <label class="form-label amarillo"  for="contrasena">Contraseña</label>
+                        <input type="password" id="contrasena" name="contrasena" autocomplete="new-password" placeholder="123ABCdef" required>
+                        <p>Debe tener al menos 8 caracteres, incluyendo un número, una mayúscula y una minúscula.</p>
+                        <p class="mensajeError" id="errorContrasena" role="alert"></p>
+                    </div>
+
+                    <div class="campo">
+                        <label class="form-label amarillo"  for="nombreCompleto">Nombre completo</label>
+                        <input type="text" id="nombreCompleto" name="nombreCompleto" autocomplete="name" placeholder="MARÍA JOSÉ TORRES FLORES" required>
+                        <p class="mensajeError" id="errorNombreCompleto" role="alert"></p>
+                    </div>
+
+                    <div class="campo">
+                        <label class="form-label amarillo"  for="nombreUsuario">Nombre de usuario</label>
+                        <input type="text" id="nombreUsuario" name="nombreUsuario" autocomplete="off" placeholder="mariajose" required>
+                        <p>Solo puede contener caracteres alfanuméricos o guiones simples.</p>
+                        <p class="mensajeError" id="errorNombreUsuario" role="alert"></p>
+                    </div>
+
+                    <div class="campo">
+                        <label class="form-label amarillo" >Tipo de documento</label>
+                        <div class="grupoOpciones">
+                            <label class="opcionRadio"><input type="radio" name="tipoDocumento" value="DNI">DNI</label>
+                            <label class="opcionRadio"><input type="radio" name="tipoDocumento" value="Carnet de extranjería">Carnet de extranjería</label>
+                            <label class="opcionRadio"><input type="radio" name="tipoDocumento" value="Pasaporte">Pasaporte</label>
+                        </div>
+                        <p class="mensajeError" id="errorTipoDocumento" role="alert"></p>
+                    </div>
+
+                    <div class="campo">
+                        <label class="form-label amarillo"  for="numeroDocumento">Número de documento</label>
+                        <input type="text" id="numeroDocumento" name="numeroDocumento" inputmode="numeric" autocomplete="off"placeholder="123456789" required>
+                        <p class="mensajeError" id="errorNumeroDocumento" role="alert"></p>
+                    </div>
+
+                    <div class="campo">
+                        <label class="form-label amarillo" for="telefono">Teléfono</label>
+                        <input type="tel" id="telefono" name="telefono" inputmode="numeric" autocomplete="tel"placeholder="999 999 999" required>
+                        <p class="mensajeError" id="errorTelefono" role="alert"></p>
+                    </div>
+
+                    <div class="campo">
+                        <label class="form-label amarillo" >Tu país</label>
+                        <p>Perú 🇵🇪</p>
+                    </div>
+
+                    <div class="campo">
+                        <label class="form-label amarillo" >Selecciona tu región</label>
+                        <div class="grupoOpciones">
+                            <label class="opcionRadio"><input type="radio" name="region" value="Arequipa">Arequipa</label>
+                            <label class="opcionRadio"><input type="radio" name="region" value="Huancayo">Huancayo</label>
+                            <label class="opcionRadio"><input type="radio" name="region" value="Lima">Lima</label>
+                            <label class="opcionRadio"><input type="radio" name="region" value="Chimbote">Chimbote</label>
+                        </div>
+                        <p class="mensajeError" id="errorRegion" role="alert"></p>
+                        <p class="seccionCabecera small">Por motivos de cumplimiento normativo, estamos obligados a recopilar información sobre tu región para enviarte actualizaciones y anuncios ocasionales.</p>
+                    </div>
+
+                    <div class="campo filaCheckbox">
+                        <label><input type="checkbox" id="preferenciasCorreo" name="preferenciasCorreo">Recibe actualizaciones y anuncios ocasionales sobre nuestros productos.</label>
+                    </div><br>
+                    <div class="d-flex justify-content-center">
+                        <button type="submit" class="btn btn-primary rounded-pill botonAmarillo botonAncho">Crear una cuenta</button>
+                    </div> <br>
+                    
+                    <p class="etiquetaGris">Al crear una cuenta, aceptas las <em class="celeste">Condiciones del servicio</em> de Star Park. Para obtener más información sobre nuestras prácticas de privacidad, consulta la <em class="celeste">Declaración de privacidad</em>. Ocasionalmente te enviaremos correos electrónicos relacionados con tu cuenta.</p>
+                </form>
+
+                <div class="separadorFormulario"></div>
+                <div class="d-flex flex-column justify-content-center ">
+                    <p class="etiquetaGris d-flex justify-content-center">¿Ya estás registrado en Star Park?</p>
+                    <div class="d-flex justify-content-center">
+                        <a class="btn btn-outline-info" href="login.html">Iniciar sesión</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Pie de página informativo. -->
+    <footer class="bg-dark text-light">
+        <div class="container d-flex justify-content-between align-items-center py-4 flex-column flex-lg-row">
+            <div>
+                <p class="fw-bold mb-1">STAR PARK</p>
+                <p>©2026 FAMILY PARK S.A.C.</p>
+            </div>
+            <div class="d-flex gap-3 mt-3 mt-lg-0">
+                <p>Protocolo de Seguridad y Privacidad</p>
+                <p>Términos de Uso</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap se carga antes del código propio de la página. -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+    <!-- auth.js maneja la validación y el registro de este formulario. -->
+    <script src="auth.js"></script>
+</body>
+</html>

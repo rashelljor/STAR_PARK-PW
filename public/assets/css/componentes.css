@@ -3,10 +3,12 @@
 
 /* Botones */
 .botonAmarillo { background: var(--amarillo); color: #11131b; font-size: 14px; font-weight: 700; padding: 10px 24px; border-radius: 999px; display: inline-block; text-decoration: none; }
+
 .botonAmarillo:hover { background: var(--celeste); color: var(--azul); }
 
 /* Etiquetas y Badges */
-.etiqueta { border: 1px solid var(--celeste); color: var(--celeste); font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 999px; display: inline-block; }
+.etiqueta { border: 1px solid var(--celeste); color: var(--celeste); font-size: 16px; font-weight: 300; padding: 4px 12px; border-radius: 999px; display: inline-block; }
+
 .badge { background: var(--celeste); color: var(--azul); font-size: 14px; font-weight: 700; padding: 4px 8px; border-radius: 4px; position: absolute; top: 10px; left: 10px; }
 
 /* Encabezados de sección reutilizables */
@@ -33,8 +35,8 @@
 
 .etiquetaGris {
   color: var(--gris);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 100;
   letter-spacing: 0.5px;
 }
 
@@ -56,8 +58,11 @@
 
 /* Menú de Navegación */
 .navbar .nav-item.dropdown { position: relative; }
+
 .navbar .dropdown-menu { position: absolute; top: 100%; left: 0; display: none; }
+
 .navbar .nav-item.dropdown:hover .dropdown-menu { display: block; }
+
 .icono-boton { width: 18px; height: 18px; object-fit: contain;}
 
 /* Tarjeta de Atracción */
@@ -120,4 +125,90 @@
 
 .tarjetaAtraccion:hover .tarjetaImgCaja img {
   transform: scale(1.08);
+}
+/* Fila que muestra el total de la compra. */
+.totalFila {
+    display: flex;
+    font-weight: 700;
+    justify-content: space-between;
+    padding-top: 8px;
+}
+
+/* Cada campo del formulario: etiqueta arriba e input debajo. */
+.campo {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+/* Estado normal del campo. Bootstrap aporta parte de su estilo. */
+.campo input {
+    background: var(--tarjeta);
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+    color: var(--texto);
+    padding: 10px 14px;
+}
+
+/* El campo se vuelve blanco al enfocarse o tener un valor válido. */
+.campo input:focus,
+.campo input:valid {
+    background: #ffffff;
+    color: #11131b;
+}
+
+.campo input::placeholder {
+    color: #6c757d;
+}
+
+.separadorFormulario {
+  height: 2px;
+  background: var(--borde);
+  margin: 4px 0;
+}
+
+
+.grupoOpciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+}
+ 
+.opcionRadio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--texto);
+}
+ 
+.filaCheckbox label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--gris);
+}
+ 
+.filaCheckbox input[type="checkbox"] {
+  margin-top: 4px;
+}
+ 
+/* Tarjetas que contienen cada parte del carrito. */
+.bloqueFormulario {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 28px;
+}
+
+/* Título de cada tarjeta. */
+.bloqueFormulario h3 {
+    border-bottom: 1px solid var(--borde);
+    font-size: 18px;
+    font-weight: 700;
+    padding-bottom: 12px;
 }
