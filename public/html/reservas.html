@@ -9,7 +9,6 @@
 
     <!-- Bootstrap, estilos generales y estilos propios de reservas. -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
-    <link rel="stylesheet" href="../../Página principal/Inicio/estilos.css">
     <link rel="stylesheet" href="../assets/css/global.css">
     <link rel="stylesheet" href="../assets/css/componentes.css">
     <link rel="stylesheet" href="../assets/css/reservas.css">
@@ -69,31 +68,90 @@
         <div id="alertContainer" class="container mt-4"></div>
 
         <!-- Título y descripción de la sección. -->
-        <div class="text-center text-white p-5">
-            <h1>PANEL DE <em>RESERVAS</em></h1><br>
+        <div class="admin-header text-white">
+            <h1>PANEL DE <em class="celeste">RESERVAS</em></h1>
             <p class="etiqueta">Todas las reservas registradas</p>
         </div>
 
         <!-- Tabla donde reservas.js inserta las reservas guardadas. -->
-        <div class="glass bloqueAdmin">
-            <table>
-                <thead>
-                    <!-- Encabezados de las columnas de la tabla. -->
-                    <tr>
-                        <th>#</th>
-                        <th>Nombre</th>
-                        <th>Correo</th>
-                        <th>Teléfono</th>
-                        <th>Fecha de visita</th>
-                        <th>Total</th>
-                        <th>Fecha y hora de registro</th>
-                        <th>Acción</th>
-                    </tr>
-                </thead>
-                <!-- El contenido se genera dinámicamente con JavaScript. -->
-                <tbody id="cuerpoTabla"></tbody>
-            </table>
+        <div class="panelAdmin">
+            <div class="bloqueAdmin">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Nombre</th>
+                            <th>Correo</th>
+                            <th>Teléfono</th>
+                            <th>Fecha de visita</th>
+                            <th>Total</th>
+                            <th>Fecha y hora de registro</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cuerpoTabla"></tbody>
+                </table>
+            </div>
         </div>
+
+        <section class="panelAdmin">
+            <h2>CRUD de clientes</h2>
+            <div class="filaFormulario">
+                <input id="clienteNombre" type="text" placeholder="Nombre completo">
+                <input id="clienteCorreo" type="email" placeholder="Correo">
+                <input id="clienteTelefono" type="tel" placeholder="Teléfono">
+                <button id="guardarCliente" class="botonPrimario" type="button">Guardar cliente</button>
+                <button id="limpiarCliente" class="botonSecundario" type="button">Limpiar</button>
+                <input id="clienteIndex" type="hidden" value="-1">
+            </div>
+
+            <div class="bloqueAdmin">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Correo</th>
+                            <th>Teléfono</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaClientes"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panelAdmin">
+            <h2>CRUD de productos y servicios</h2>
+            <div class="filaFormulario">
+                <input id="productoNombre" type="text" placeholder="Nombre del producto">
+                <input id="productoDescripcion" type="text" placeholder="Descripción">
+                <select id="productoCategoria">
+                    <option value="promociones">Promoción</option>
+                    <option value="botin">Botín</option>
+                </select>
+                <input id="productoPrecio" type="number" placeholder="Precio" step="0.01">
+                <input id="productoDuracion" type="text" placeholder="Duración">
+                <input id="productoImagen" type="text" placeholder="Ruta de imagen (opcional)">
+                <button id="guardarProducto" class="botonPrimario" type="button">Guardar producto</button>
+                <button id="limpiarProducto" class="botonSecundario" type="button">Limpiar</button>
+                <input id="productoIndex" type="hidden" value="-1">
+            </div>
+
+            <div class="bloqueAdmin">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Categoría</th>
+                            <th>Precio</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaProductos"></tbody>
+                </table>
+            </div>
+        </section>
     </main>
 
     <!-- Pie de página informativo. -->
@@ -113,7 +171,7 @@
     <!-- Bootstrap se carga antes del código propio de reservas. -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
     <!-- reservas.js carga, paga y elimina reservas. -->
-    <script src="reservas.js"></script>
+    <script src="../js/controller/reservas.js"></script>
 
 </body>
 </html>
