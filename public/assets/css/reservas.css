@@ -1,78 +1,195 @@
-/* Estilos exclusivos del panel de reservas. */
+/* Estilos exclusivos del panel de reservas y CRUDs. */
 
-/* Bloque que contiene la tabla de reservas. */
-.bloqueAdmin {
-    margin-top: 24px;
-    overflow-x: auto;
-    padding: 28px;
+body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
 }
 
-/* La tabla ocupa todo el ancho disponible. */
+main {
+    padding-top: 30px;
+    padding-bottom: 60px;
+}
+
+.panelAdmin {
+    background: rgba(18, 24, 33, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 18px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    margin: 18px 0 30px;
+    padding: 28px 22px 18px;
+}
+
+.panelAdmin h2 {
+    color: white;
+    font-size: clamp(28px, 2vw, 42px);
+    font-weight: 800;
+    margin-bottom: 22px;
+}
+
+.bloqueAdmin {
+    margin-top: 14px;
+    overflow-x: auto;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+}
+
 table {
     border-collapse: collapse;
     width: 100%;
+    min-width: 700px;
 }
 
-/* Encabezados de las columnas. */
 table th {
-    background: #67a6cc;
-    color: white;
+    background: #8ecff2;
+    color: #071522;
     font-size: 13px;
-    font-weight: 700;
-    padding: 12px 16px;
+    font-weight: 800;
+    padding: 14px 16px;
     text-align: left;
 }
 
-/* Celdas con información de cada reserva. */
 table td {
-    border-bottom: 1px solid var(--borde);
-    color: var(--gris);
-    font-size: 13px;
-    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    color: #eef3ff;
+    font-size: 14px;
+    padding: 14px 16px;
 }
 
-/* Alterna el fondo de las filas para facilitar la lectura. */
-table tr:nth-child(even) { background: var(--tarjeta); }
-table tr:hover { background: var(--superficie); }
+table tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.02);
+}
 
-/* Botón para eliminar una reserva. */
-.botonEliminar {
-    background: transparent;
-    border: 1px solid #ff6b6b;
-    border-radius: 6px;
-    color: #ff6b6b;
+table tr:hover {
+    background: rgba(142, 207, 242, 0.06);
+}
+
+.botonEliminar,
+.botonEditar,
+.botonPagar,
+.botonEstado,
+.botonPrimario,
+.botonSecundario {
+    border-radius: 8px;
     cursor: pointer;
-    font-family: var(--fuente);
     font-size: 12px;
     font-weight: 700;
-    padding: 4px 10px;
+    padding: 7px 12px;
+    transition: all 0.2s ease;
 }
 
-.botonEliminar:hover {
-    background: rgba(255, 107, 107, 0.15);
-}
-
-/* Botón para marcar una reserva como pagada. */
 .botonPagar {
     background: transparent;
-    border: 1px solid var(--celeste);
-    border-radius: 6px;
-    color: var(--celeste);
-    cursor: pointer;
-    font-family: var(--fuente);
-    font-size: 12px;
-    font-weight: 700;
+    border: 1px solid #8ce3fd;
+    color: #8ce3fd;
     margin-right: 6px;
-    padding: 4px 10px;
 }
 
-.botonPagar:hover {
-    background: rgba(140, 227, 253, 0.15);
+.botonEditar,
+.botonEstado {
+    background: transparent;
+    border: 1px solid #8ce3fd;
+    color: #8ce3fd;
+    margin-right: 4px;
 }
 
-/* En pantallas pequeñas se reducen los márgenes laterales. */
-@media (max-width: 800px) {
+.botonEliminar {
+    background: transparent;
+    border: 1px solid #ff6262;
+    color: #ff6262;
+}
+
+.botonPrimario {
+    background: #f7d645;
+    border: 1px solid #f7d645;
+    color: #0d1b2a;
+    font-weight: 800;
+    min-width: 160px;
+}
+
+.botonSecundario {
+    background: transparent;
+    border: 1px solid #8ce3fd;
+    color: #8ce3fd;
+    min-width: 120px;
+}
+
+.botonPrimario:hover,
+.botonSecundario:hover,
+.botonEditar:hover,
+.botonEstado:hover,
+.botonPagar:hover,
+.botonEliminar:hover {
+    transform: translateY(-1px);
+    opacity: 0.95;
+}
+
+.filaFormulario {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.filaFormulario input,
+.filaFormulario select {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    color: white;
+    min-height: 42px;
+    padding: 10px 12px;
+    width: 100%;
+}
+
+.filaFormulario input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.inputTexto {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    color: white;
+    min-height: 42px;
+    padding: 10px 12px;
+    width: 100%;
+}
+
+.admin-header {
+    background: rgba(17, 20, 29, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    margin-bottom: 18px;
+    padding: 22px 24px 10px;
+}
+
+.admin-header h1 {
+    margin: 0;
+    font-size: clamp(32px, 3vw, 60px);
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    line-height: 1.08;
+}
+
+.admin-header .etiqueta {
+    margin-top: 10px;
+    font-size: 18px;
+    color: #d9dee7;
+}
+
+@media (max-width: 900px) {
+    .filaFormulario {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .filaFormulario {
+        grid-template-columns: 1fr;
+    }
+
     main {
-        padding: 40px 16px;
+        padding-left: 16px;
+        padding-right: 16px;
     }
 }
