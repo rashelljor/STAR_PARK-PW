@@ -93,67 +93,7 @@
                 </table>
             </div>
         </div>
-
-        <section class="panelAdmin">
-            <h2>CRUD de clientes</h2>
-            <div class="filaFormulario">
-                <input id="clienteNombre" type="text" placeholder="Nombre completo">
-                <input id="clienteCorreo" type="email" placeholder="Correo">
-                <input id="clienteTelefono" type="tel" placeholder="Teléfono">
-                <button id="guardarCliente" class="botonPrimario" type="button">Guardar cliente</button>
-                <button id="limpiarCliente" class="botonSecundario" type="button">Limpiar</button>
-                <input id="clienteIndex" type="hidden" value="-1">
-            </div>
-
-            <div class="bloqueAdmin">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Nombre</th>
-                            <th>Correo</th>
-                            <th>Teléfono</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tablaClientes"></tbody>
-                </table>
-            </div>
-        </section>
-
-        <section class="panelAdmin">
-            <h2>CRUD de productos y servicios</h2>
-            <div class="filaFormulario">
-                <input id="productoNombre" type="text" placeholder="Nombre del producto">
-                <input id="productoDescripcion" type="text" placeholder="Descripción">
-                <select id="productoCategoria">
-                    <option value="promociones">Promoción</option>
-                    <option value="botin">Botín</option>
-                </select>
-                <input id="productoPrecio" type="number" placeholder="Precio" step="0.01">
-                <input id="productoDuracion" type="text" placeholder="Duración">
-                <input id="productoImagen" type="text" placeholder="Ruta de imagen (opcional)">
-                <button id="guardarProducto" class="botonPrimario" type="button">Guardar producto</button>
-                <button id="limpiarProducto" class="botonSecundario" type="button">Limpiar</button>
-                <input id="productoIndex" type="hidden" value="-1">
-            </div>
-
-            <div class="bloqueAdmin">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Nombre</th>
-                            <th>Categoría</th>
-                            <th>Precio</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tablaProductos"></tbody>
-                </table>
-            </div>
-        </section>
     </main>
-
     <!-- Pie de página informativo. -->
     <footer class="bg-dark text-light">
         <div class="container d-flex justify-content-between align-items-center py-4 flex-column flex-lg-row">

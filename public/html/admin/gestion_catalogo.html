@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <section class="panelAdmin">
+            <h2>CRUD de productos y servicios</h2>
+            <div class="filaFormulario">
+                <input id="productoNombre" type="text" placeholder="Nombre del producto">
+                <input id="productoDescripcion" type="text" placeholder="Descripción">
+                <select id="productoCategoria">
+                    <option value="promociones">Promoción</option>
+                    <option value="botin">Botín</option>
+                </select>
+                <input id="productoPrecio" type="number" placeholder="Precio" step="0.01">
+                <input id="productoDuracion" type="text" placeholder="Duración">
+                <input id="productoImagen" type="text" placeholder="Ruta de imagen (opcional)">
+                <button id="guardarProducto" class="botonPrimario" type="button">Guardar producto</button>
+                <button id="limpiarProducto" class="botonSecundario" type="button">Limpiar</button>
+                <input id="productoIndex" type="hidden" value="-1">
+            </div>
+
+            <div class="bloqueAdmin">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Categoría</th>
+                            <th>Precio</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaProductos"></tbody>
+                </table>
+            </div>
+        </section>
+</body>
+</html>

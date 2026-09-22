@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <section class="panelAdmin">
+            <h2>CRUD de clientes</h2>
+            <div class="filaFormulario">
+                <input id="clienteNombre" type="text" placeholder="Nombre completo">
+                <input id="clienteCorreo" type="email" placeholder="Correo">
+                <input id="clienteTelefono" type="tel" placeholder="Teléfono">
+                <button id="guardarCliente" class="botonPrimario" type="button">Guardar cliente</button>
+                <button id="limpiarCliente" class="botonSecundario" type="button">Limpiar</button>
+                <input id="clienteIndex" type="hidden" value="-1">
+            </div>
+
+            <div class="bloqueAdmin">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Correo</th>
+                            <th>Teléfono</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaClientes"></tbody>
+                </table>
+            </div>
+        </section>
+</body>
+</html>
