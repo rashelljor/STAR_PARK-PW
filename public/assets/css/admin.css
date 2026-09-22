@@ -1,0 +1,16 @@
+body {
+  background-color: var(--fondo); 
+  
+  /* Sintaxis limpia de fondo completo */
+  background-image: 
+    linear-gradient(rgba(17, 19, 27, 0.716), rgba(17, 19, 27, 0.746)), 
+    url('../img/fondoadmin.png'); 
+
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  
+  color: var(--texto); 
+  font-family: var(--fuente); 
+}
