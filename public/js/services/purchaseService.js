@@ -1,8 +1,8 @@
-// purchaseService.js - Historial de compras (boletas) del usuario.
-// bookingService.pagarReserva() es quien escribe en esta misma clave al pagar.
+import { auth, db } from '../config/firebaseConfig.js'
+import { collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
 
-const CLAVE_COMPRAS = 'compras'
-
-export function obtenerCompras() {
-    return JSON.parse(localStorage.getItem(CLAVE_COMPRAS)) || []
+export async function obtenerCompras() {
+    if (!auth.currentUser) return []
+    const snapshot = await getDocs(query(collection(db, 'transacciones'), where('uid', '==', auth.currentUser.uid)))
+    return snapshot.docs.map(documento => ({ id: documento.id, ...documento.data() }))
 }

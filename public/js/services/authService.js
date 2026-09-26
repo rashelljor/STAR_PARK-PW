@@ -1,55 +1,63 @@
-// authService.js - Inicio de sesión y registro para las vistas Vue de
-// Login y Registro. Usa las mismas claves de localStorage que
-// controller/auth.js ('starparkUsuarios', 'starparkSesion'), que sigue
-// activo tal cual en el panel administrativo (admin.html), para que una
-// cuenta creada desde cualquiera de los dos lados funcione en el otro.
+import { auth, db } from '../config/firebaseConfig.js'
+import {
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js'
+import {
+    collection,
+    doc,
+    getDocs,
+    query,
+    setDoc,
+    where
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
 
-const CLAVE_USUARIOS = 'starparkUsuarios'
-const CLAVE_SESION = 'starparkSesion'
+const usuariosRef = collection(db, 'usuarios')
 
-function obtenerUsuarios() {
+function mensajeAuth(error) {
+    const mensajes = {
+        'auth/invalid-credential': 'El correo o la contraseña son incorrectos.',
+        'auth/email-already-in-use': 'Ya existe una cuenta con este correo electrónico.',
+        'auth/invalid-email': 'Ingresa un correo electrónico válido.',
+        'auth/weak-password': 'La contraseña no cumple los requisitos mínimos.'
+    }
+    return mensajes[error.code] || 'No se pudo completar la operación. Intenta nuevamente.'
+}
+
+export async function iniciarSesion(usuario, contrasena) {
     try {
-        return JSON.parse(localStorage.getItem(CLAVE_USUARIOS)) || []
-    } catch {
-        return []
+        let correo = usuario.trim()
+        const porUsuario = query(usuariosRef, where('nombreUsuario', '==', correo))
+        const resultado = await getDocs(porUsuario)
+        if (!resultado.empty) correo = resultado.docs[0].data().correo
+        await signInWithEmailAndPassword(auth, correo, contrasena)
+        return { ok: true }
+    } catch (error) {
+        return { ok: false, mensaje: mensajeAuth(error) }
     }
 }
 
-function guardarUsuarios(usuarios) {
-    localStorage.setItem(CLAVE_USUARIOS, JSON.stringify(usuarios))
+export async function registrarUsuario(datos) {
+    try {
+        const existente = await getDocs(query(usuariosRef, where('nombreUsuario', '==', datos.nombreUsuario)))
+        if (!existente.empty) {
+            return { ok: false, campo: 'nombreUsuario', mensaje: 'Este nombre de usuario ya está en uso.' }
+        }
+
+        const credencial = await createUserWithEmailAndPassword(auth, datos.correo, datos.contrasena)
+        const { contrasena, ...perfil } = datos
+        await setDoc(doc(db, 'usuarios', credencial.user.uid), {
+            ...perfil,
+            uid: credencial.user.uid,
+            rol: 'cliente',
+            creadoEn: new Date()
+        })
+        await signOut(auth)
+        return { ok: true }
+    } catch (error) {
+        return { ok: false, campo: 'general', mensaje: mensajeAuth(error) }
+    }
 }
 
-// Devuelve { ok: true } o { ok: false, mensaje }.
-export function iniciarSesion(usuario, contrasena) {
-    const usuarios = obtenerUsuarios()
-
-    const encontrado = usuarios.find(u =>
-        u.correo.toLowerCase() === usuario.toLowerCase() ||
-        u.nombreUsuario.toLowerCase() === usuario.toLowerCase()
-    )
-
-    if (!encontrado || encontrado.contrasena !== contrasena) {
-        return { ok: false, mensaje: 'El nombre de usuario, correo o la contraseña son incorrectos.' }
-    }
-
-    localStorage.setItem(CLAVE_SESION, encontrado.nombreUsuario)
-    return { ok: true }
-}
-
-// Devuelve { ok: true } o { ok: false, campo, mensaje } cuando el correo o el
-// nombre de usuario ya están en uso (el resto de la validación es de formulario).
-export function registrarUsuario(datos) {
-    const usuarios = obtenerUsuarios()
-
-    if (usuarios.some(u => u.correo.toLowerCase() === datos.correo.toLowerCase())) {
-        return { ok: false, campo: 'correo', mensaje: 'Ya existe una cuenta registrada con este correo electrónico.' }
-    }
-
-    if (usuarios.some(u => u.nombreUsuario.toLowerCase() === datos.nombreUsuario.toLowerCase())) {
-        return { ok: false, campo: 'nombreUsuario', mensaje: 'Este nombre de usuario ya está en uso.' }
-    }
-
-    usuarios.push(datos)
-    guardarUsuarios(usuarios)
-    return { ok: true }
-}
+export { auth, db, mensajeAuth }

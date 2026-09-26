@@ -8,7 +8,7 @@ export default {
             <nav class="navbar navbar-dark">
                 <div class="container-fluid gap-3">
                     <a href="index.html">
-                        <img src="../assets/img/logostar.png" alt="Star Park Logo" height="48">
+                        <img src="../../assets/img/logostar.png" alt="Star Park Logo" height="48">
                     </a>
                     <ul class="navbar-nav flex-row gap-5">
                         <li class="nav-item dropdown">
@@ -43,7 +43,7 @@ export default {
                     </ul>
                     <div>
                         <!-- Enlace directo al carrito. -->
-                        <a class="btn btn-primary rounded-pill botonAmarillo d-inline-flex align-items-center gap-2" href="carrito.html"><img src="../assets/img/iconcarrito.png" alt="Carrito" class="icono-boton">Ver mi carrito</a>
+                        <a class="btn btn-primary rounded-pill botonAmarillo d-inline-flex align-items-center gap-2" href="carrito.html"><img src="../../assets/img/iconcarrito.png" alt="Carrito" class="icono-boton">Ver mi carrito</a>
                         <!-- Enlace directo al log in. -->
                         <a class="btn btn-primary rounded-pill botonAmarillo" href="login.html">👤 Iniciar sesión</a>
                     </div>

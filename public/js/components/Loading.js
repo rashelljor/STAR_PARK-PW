@@ -10,6 +10,6 @@ export default {
         }
     },
 
-    template: `<p class="etiquetaGris text-center p-4">{{ message }}</p>`
+    template: `<p class="etiqueta glass text-center p-4">{{ message }}</p>`
 
 }

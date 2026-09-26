@@ -26,8 +26,8 @@ export default {
 
     async mounted() {
         try {
-            this.promociones = getProductsByCategory('promociones')
-            this.botin = getProductsByCategory('botin')
+            this.promociones = await getProductsByCategory('promociones')
+            this.botin = await getProductsByCategory('botin')
         } catch (error) {
             console.error(error)
             this.error = 'No se pudo cargar el catálogo.'
@@ -37,12 +37,12 @@ export default {
     },
 
     methods: {
-        buscarServicio() {
-            this.resultados = searchProducts(this.busqueda)
+        async buscarServicio() {
+            this.resultados = await searchProducts(this.busqueda)
         },
 
-        agregarAlCarrito(producto) {
-            agregarProducto(producto)
+        async agregarAlCarrito(producto) {
+            await agregarProducto(producto)
             alert(producto.nombre + ' añadido al carrito')
         }
     },

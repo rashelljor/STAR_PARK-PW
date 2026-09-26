@@ -27,8 +27,8 @@ export default {
     },
 
     methods: {
-        cargar() {
-            this.reservas = obtenerReservas()
+        async cargar() {
+            this.reservas = await obtenerReservas()
 
             if (this.reservas.length === 0) {
                 this.mostrarAlerta('No hay reservas aún.', 'info')
@@ -39,13 +39,13 @@ export default {
             this.alerta = { mensaje, tipo }
         },
 
-        pagar(indice) {
-            pagarReserva(indice)
-            this.cargar()
+        async pagar(indice) {
+            await pagarReserva(this.reservas[indice].id)
+            await this.cargar()
             alert('Pago confirmado. Revisa Mis Compras.')
         },
 
-        editar(indice) {
+        async editar(indice) {
             const reserva = this.reservas[indice]
             const nombre = prompt('Nombre completo', reserva.nombre)
             const correo = prompt('Correo', reserva.correo)
@@ -56,20 +56,20 @@ export default {
                 return
             }
 
-            actualizarReserva(indice, {
+            await actualizarReserva(reserva.id, {
                 nombre: nombre.trim(),
                 correo: correo.trim(),
                 telefono: telefono.trim(),
                 fecha: fecha.trim()
             })
 
-            this.cargar()
+            await this.cargar()
             this.mostrarAlerta('Reserva actualizada correctamente.', 'success')
         },
 
-        eliminar(indice) {
-            eliminarReserva(indice)
-            this.cargar()
+        async eliminar(indice) {
+            await eliminarReserva(this.reservas[indice].id)
+            await this.cargar()
             this.mostrarAlerta('Reserva eliminada correctamente.', 'success')
         }
     },

@@ -1,18 +1,70 @@
-rules_version='2'
+rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function admin() {
+      return signedIn() &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'admin';
+    }
+
+    function ownUser(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    match /productos/{id} {
+      allow read: if true;
+      allow create, update, delete: if admin();
+    }
+
+    match /contenido/{id} {
+      allow read: if true;
+      allow create, update, delete: if admin();
+    }
+
+    match /atracciones/{id} {
+      allow read: if true;
+      allow create, update, delete: if admin();
+    }
+
+    match /servicios/{id} {
+      allow read: if true;
+      allow create, update, delete: if admin();
+    }
+
+    match /usuarios/{uid} {
+      allow create: if ownUser(uid) && request.resource.data.rol == 'cliente';
+      allow read: if ownUser(uid) || admin();
+      allow update: if admin() || (ownUser(uid) && request.resource.data.rol == resource.data.rol);
+      allow delete: if admin() && uid != request.auth.uid;
+
+      match /carrito/{itemId} {
+        allow read, write: if ownUser(uid);
+      }
+    }
+
+    match /reservas/{id} {
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow read, update, delete: if admin() || (signedIn() && resource.data.uid == request.auth.uid);
+    }
+
+    match /transacciones/{id} {
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow read: if admin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow update, delete: if admin();
+    }
+
+    match /configuracion/{document} {
+      // Solo el UID del administrador puede editar la configuración
+      allow write: if request.auth != null && request.auth.uid == 'G3yhr3oVJmZDqFgIkhDOINI6bWJ3';
+      allow read: if true;
+    }
+
     match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2026, 10, 15);
+      allow read, write: if false;
     }
   }
 }

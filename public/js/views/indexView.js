@@ -1,12 +1,57 @@
 // Inicio.js - Vista de la página principal (antes users/index.html).
-// Contenido estático: portada, atracciones, servicios y ubicación.
+// Portada fija; atracciones, servicios, ubicación, horarios y contacto vienen de Firestore.
 
 import Header from '../components/Header.js'
 import Footer from '../components/Footer.js'
+import { db } from '../config/firebaseConfig.js'
+import { collection, doc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
+import { CONTENIDO_INICIAL } from '../utils/contenidoInicial.js'
+
+const IMAGEN_POR_DEFECTO = '../../assets/img/logostar.png'
 
 export default {
 
     components: { Header, Footer },
+
+    data() {
+        return {
+            contenido: { ...CONTENIDO_INICIAL },
+            atracciones: [],
+            servicios: [],
+            cargado: false,
+            cancelar: []
+        }
+    },
+
+    // El contenido se edita desde el panel admin (Contenido institucional) y se
+    // escucha en tiempo real: cualquier cambio se ve sin recargar la página.
+    mounted() {
+        const alFallar = error => { console.error(error); this.cargado = true }
+        const ordenar = docs => docs.map(d => ({ id: d.id, ...d.data() })).sort((x, y) => (x.orden || 0) - (y.orden || 0))
+
+        this.cancelar = [
+            onSnapshot(doc(db, 'contenido', 'institucional'), snap => {
+                this.contenido = { ...CONTENIDO_INICIAL, ...(snap.exists() ? snap.data() : {}) }
+            }, alFallar),
+            onSnapshot(collection(db, 'atracciones'), snap => { this.atracciones = ordenar(snap.docs); this.cargado = true }, alFallar),
+            onSnapshot(collection(db, 'servicios'), snap => { this.servicios = ordenar(snap.docs) }, alFallar)
+        ]
+    },
+
+    unmounted() {
+        this.cancelar.forEach(detener => detener())
+    },
+
+    methods: {
+        imagenDe(item) {
+            return item.imagen || IMAGEN_POR_DEFECTO
+        },
+
+        // Cada línea de la descripción es una viñeta cuando hay más de una.
+        lineas(texto) {
+            return String(texto || '').split('\n').map(l => l.trim()).filter(Boolean)
+        }
+    },
 
     template: `
         <div>
@@ -14,7 +59,7 @@ export default {
 
             <!-- Portada principal con imagen y mensaje de bienvenida. -->
             <section id="inicio" class="hero">
-                <img src="../assets/img/portada.png" alt="2 jóvenes jugando en el AirGame, Star Park" class="heroFoto">
+                <img src="../../assets/img/portada.png" alt="2 jóvenes jugando en el AirGame, Star Park" class="heroFoto">
                 <div class="heroWrapper">
                     <div class="heroContenido">
                         <p class="etiqueta">¡Destino galáctico #1 en Huancayo!</p>
@@ -37,70 +82,16 @@ export default {
                         <h2>ATRACCIONES</h2>
                         <p class="etiquetaGris">MULTIVERSO DE ENTRETENIMIENTO</p>
                     </div>
-                    <div class="grilla3col">
-                        <article class="tarjetaAtraccion glass">
+                    <p v-if="cargado && !atracciones.length" class="etiquetaGris">Próximamente nuevas atracciones.</p>
+                    <div v-else class="grilla3col">
+                        <article v-for="atraccion in atracciones" :key="atraccion.id" class="tarjetaAtraccion glass">
                             <div class="tarjetaImgCaja">
-                                <img src="../assets/img/aventuraespacial01.png" alt="Área de juegos, Aventura Espacial">
-                                <div class="badge">INFANTIL</div>
+                                <img :src="imagenDe(atraccion)" :alt="atraccion.nombre">
+                                <div v-if="atraccion.etiqueta" class="badge">{{ atraccion.etiqueta }}</div>
                             </div>
                             <div class="tarjetaCuerpo">
-                                <h3 class="celeste">AVENTURA ESPACIAL</h3>
-                                <p>¡Diversión 100% segura para pequeños astronautas de 4 a 12 años! Saltarín, trampolín, carritos y tobogán.</p>
-                            </div>
-                        </article>
-
-                        <article class="tarjetaAtraccion glass">
-                            <div class="tarjetaImgCaja">
-                                <img src="../assets/img/misionmarciana01.png" alt="Piscina de pelotas y sensores, Misión Marciana">
-                                <span class="badge">INFANTIL</span>
-                            </div>
-                            <div class="tarjetaCuerpo">
-                                <h3 class="celeste">MISIÓN MARCIANA</h3>
-                                <p>Viaja a Marte en una aventura inmersiva: tecnología táctil, sensores interactivos y zona de escalada.</p>
-                            </div>
-                        </article>
-
-                        <article class="tarjetaAtraccion glass">
-                            <div class="tarjetaImgCaja">
-                                <img src="../assets/img/dunbol.png" alt="Laberinto Dunbol, juego de orientación y reflejos">
-                                <span class="badge">INFANTIL</span>
-                            </div>
-                            <div class="tarjetaCuerpo">
-                                <h3 class="celeste">LABERINTO DUNBOL</h3>
-                                <p>¡Pone a prueba tus reflejos y tu orientación! Explora caminos llenos de sorpresas y supera el reto en este divertido recorrido.</p>
-                            </div>
-                        </article>
-
-                        <article class="tarjetaAtraccion glass">
-                            <div class="tarjetaImgCaja">
-                                <img src="../assets/img/carrito.png" alt="Carrito chocón, juego de carreras y choques">
-                                <div class="badge">FAMILIAR</div>
-                            </div>
-                            <div class="tarjetaCuerpo">
-                                <h3 class="celeste">CARRITO CHOCÓN</h3>
-                                <p>¡Siente la adrenalina y la aceleración! Maneja tu propio auto, esquiva obstáculos y choca en una pista llena de acción y diversión.</p>
-                            </div>
-                        </article>
-
-                        <article class="tarjetaAtraccion glass">
-                            <div class="tarjetaImgCaja">
-                                <img src="../assets/img/realidadvirtual.png" alt="Realidad virtual, experiencia inmersiva en 3D">
-                                <span class="badge">FAMILIAR</span>
-                            </div>
-                            <div class="tarjetaCuerpo">
-                                <h3 class="celeste">REALIDAD VIRTUAL</h3>
-                                <p>Sumérgete en mundos increíbles y experiencias 3D. Vive aventuras inmersivas con tecnología de vanguardia que desafiará tus sentidos.</p>
-                            </div>
-                        </article>
-
-                        <article class="tarjetaAtraccion glass">
-                            <div class="tarjetaImgCaja">
-                                <img src="../assets/img/maquinas.png" alt="Juegos Arcade">
-                                <span class="badge">FAMILIAR</span>
-                            </div>
-                            <div class="tarjetaCuerpo">
-                                <h3 class="celeste">JUEGOS ARCADE</h3>
-                                <p>¡Diversión retro y moderna para todas las edades! Compite en familia en los mejores juegos arcade.</p>
+                                <h3 class="celeste">{{ atraccion.nombre }}</h3>
+                                <p>{{ atraccion.descripcion }}</p>
                             </div>
                         </article>
                     </div>
@@ -113,38 +104,18 @@ export default {
                         <p class="etiquetaGris">SUMINISTROS DE ÉLITE PARA EXPLORADORES</p>
                     </div>
 
-                    <div class="grillaServicios">
-                        <article class="tarjetaServicio glass">
+                    <p v-if="cargado && !servicios.length" class="etiquetaGris">Próximamente nuevos servicios.</p>
+                    <div v-else class="grillaServicios">
+                        <article v-for="servicio in servicios" :key="servicio.id" class="tarjetaServicio glass">
                             <div class="tarjetaImgCaja">
-                                <img src="../assets/img/confiteria.png" alt="Área de Confitería">
+                                <img :src="imagenDe(servicio)" :alt="servicio.nombre">
                             </div>
                             <div class="tarjetaCuerpo">
-                                <h3 class="amarillo">SNACKS PREMIUM AERO-ESPACIALES</h3>
-                                <p>Visita nuestra confitería y recarga energías con una selección de sabores de otra galaxia.</p>
-                            </div>
-                        </article>
-
-                        <article class="tarjetaServicio glass">
-                            <div class="tarjetaImgCaja">
-                                <img src="../assets/img/vitrina.png" alt="Vitrina de juguetes y artículos con temática espacial">
-                            </div>
-                            <div class="tarjetaCuerpo">
-                                <h3 class="amarillo">BAZAR INTERGALÁCTICO</h3>
-                                <p>Regalos y artículos exclusivos de temática espacial: lapiceros, loncheras, libros y más.</p>
-                            </div>
-                        </article>
-
-                        <article class="tarjetaServicio glass">
-                            <div class="tarjetaImgCaja">
-                                <img src="../assets/img/cumpleaños.png" alt="Cumpleaños Espaciales">
-                            </div>
-                            <div class="tarjetaCuerpo">
-                                <h3 class="amarillo">CUMPLEAÑOS ESPACIALES</h3>
-                                <ul class="tarjetaCuerpo">
-                                    <li>Acceso VIP a todas las atracciones</li>
-                                    <li>Sala VIP ambientada como estación espacial</li>
-                                    <li>Anfitrión animador con dinámicas espaciales</li>
+                                <h3 class="amarillo">{{ servicio.nombre }}</h3>
+                                <ul v-if="lineas(servicio.descripcion).length > 1" class="tarjetaCuerpo">
+                                    <li v-for="linea in lineas(servicio.descripcion)" :key="linea">{{ linea }}</li>
                                 </ul>
+                                <p v-else>{{ servicio.descripcion }}</p>
                             </div>
                         </article>
                     </div>
@@ -162,27 +133,27 @@ export default {
                             <div class="tarjetaCuerpo">
                                 <div>
                                     <h3 class="amarillo"> 🌎 Ubicación Estelar</h3>
-                                    <p>Sótano del Centro Comercial Constitución, Calle Real 475, Huancayo, Junín - Perú</p>
+                                    <p>{{ contenido.ubicacion }}</p>
                                 </div>
                             </div>
 
                             <div class="tarjetaCuerpo">
                                 <div>
                                     <h3 class="amarillo"> 🛸 Horario de Operaciones</h3>
-                                    <p><strong>Lun a Vie:</strong> 11:00 AM - 10:00 PM<br><strong>Sáb a Dom:</strong> 10:00 AM - 10:00 PM</p>
+                                    <p>{{ contenido.horarios }}</p>
                                 </div>
                             </div>
 
                             <div class="tarjetaCuerpo">
                                 <div>
                                     <h3 class="amarillo"> 📞 Contacto Galáctico</h3>
-                                    <p><strong>Teléfono:</strong> 997 289 333<br><strong>Correo:</strong> pqcentralpark@gmail.com</p>
+                                    <p>{{ contenido.contacto }}</p>
                                 </div>
                             </div>
                         </div>
 
                         <div class="tarjetaMapa glass">
-                            <img src="../assets/img/mapa_huancayo.png" alt="Mapa Ubicación Star Park, Huancayo" class="mapaImagen">
+                            <img src="../../assets/img/mapa_huancayo.png" alt="Mapa Ubicación Star Park, Huancayo" class="mapaImagen">
                         </div>
                     </div>
                 </section>

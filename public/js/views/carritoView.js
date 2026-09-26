@@ -5,7 +5,7 @@
 
 import Header from '../components/Header.js'
 import Footer from '../components/Footer.js'
-import { obtenerCarrito, quitarProducto, calcularTotal } from '../services/cartService.js'
+import { obtenerCarrito, quitarProducto, calcularTotal, limpiarCarrito } from '../services/cartService.js'
 import { crearReserva } from '../services/bookingService.js'
 import { formatearPrecio } from '../utils/formatters.js'
 
@@ -32,8 +32,8 @@ export default {
         }
     },
 
-    mounted() {
-        this.carrito = obtenerCarrito()
+    async mounted() {
+        this.carrito = await obtenerCarrito()
         // Impide seleccionar una fecha anterior al día actual.
         this.fechaMinima = new Date().toISOString().slice(0, 10)
     },
@@ -41,17 +41,17 @@ export default {
     methods: {
         formatearPrecio,
 
-        eliminar(indice) {
-            this.carrito = quitarProducto(indice)
+        async eliminar(indice) {
+            this.carrito = await quitarProducto(indice)
         },
 
-        confirmarReserva() {
+        async confirmarReserva() {
             if (this.carrito.length === 0) {
                 alert('Tu carrito está vacío.')
                 return
             }
 
-            crearReserva({
+            await crearReserva({
                 nombre: this.formulario.nombre,
                 correo: this.formulario.correo,
                 telefono: this.formulario.telefono,
@@ -60,7 +60,7 @@ export default {
                 items: this.carrito
             })
 
-            localStorage.removeItem('carrito')
+            await limpiarCarrito()
             this.carrito = []
             this.formulario = { nombre: '', correo: '', telefono: '', fecha: '' }
 

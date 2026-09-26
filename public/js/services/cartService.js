@@ -3,13 +3,13 @@
 
 import { leerCarrito, guardarCarrito, vaciarCarrito } from '../repository/cartRepository.js'
 
-export function obtenerCarrito() {
+export async function obtenerCarrito() {
     return leerCarrito()
 }
 
 // Agrega un producto del catálogo al carrito (solo lo esencial: id, nombre y precio).
-export function agregarProducto(producto) {
-    const carrito = leerCarrito()
+export async function agregarProducto(producto) {
+    const carrito = await leerCarrito()
 
     carrito.push({
         id: producto.id,
@@ -17,15 +17,13 @@ export function agregarProducto(producto) {
         precio: producto.precio
     })
 
-    guardarCarrito(carrito)
-    return carrito
+    return guardarCarrito(carrito)
 }
 
-export function quitarProducto(indice) {
-    const carrito = leerCarrito()
+export async function quitarProducto(indice) {
+    const carrito = await leerCarrito()
     carrito.splice(indice, 1)
-    guardarCarrito(carrito)
-    return carrito
+    return guardarCarrito(carrito)
 }
 
 export function calcularTotal(carrito) {

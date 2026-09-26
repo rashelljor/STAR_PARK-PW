@@ -1,21 +1,25 @@
-// cartRepository.js - Acceso directo a la clave 'carrito' en localStorage.
-// Es la única parte del carrito que sabe cómo se guardan los datos;
-// cartService.js construye la lógica de negocio sobre estas funciones.
+import { auth, db } from '../config/firebaseConfig.js'
+import { collection, deleteDoc, doc, getDocs, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
 
-const CLAVE_CARRITO = 'carrito'
-
-export function leerCarrito() {
-    try {
-        return JSON.parse(localStorage.getItem(CLAVE_CARRITO)) || []
-    } catch {
-        return []
-    }
+function carritoRef() {
+    if (!auth.currentUser) throw new Error('Debes iniciar sesión para usar el carrito.')
+    return collection(db, 'usuarios', auth.currentUser.uid, 'carrito')
 }
 
-export function guardarCarrito(items) {
-    localStorage.setItem(CLAVE_CARRITO, JSON.stringify(items))
+export async function leerCarrito() {
+    const snapshot = await getDocs(carritoRef())
+    return snapshot.docs.map(documento => ({ id: documento.id, ...documento.data() }))
 }
 
-export function vaciarCarrito() {
-    localStorage.removeItem(CLAVE_CARRITO)
+export async function guardarCarrito(items) {
+    const referencia = carritoRef()
+    const actual = await getDocs(referencia)
+    await Promise.all(actual.docs.map(documento => deleteDoc(documento.ref)))
+    await Promise.all(items.map(item => setDoc(doc(referencia), item)))
+    return items
+}
+
+export async function vaciarCarrito() {
+    const snapshot = await getDocs(carritoRef())
+    await Promise.all(snapshot.docs.map(documento => deleteDoc(documento.ref)))
 }

@@ -15,8 +15,8 @@ export default {
         }
     },
 
-    mounted() {
-        this.compras = obtenerCompras()
+    async mounted() {
+        this.compras = await obtenerCompras()
     },
 
     methods: {

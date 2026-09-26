@@ -1,6 +1,3 @@
-// Login.js - Vista de inicio de sesión (antes users/login.html).
-// Misma validación y misma "base de datos" en localStorage que controller/auth.js.
-
 import Header from '../components/Header.js'
 import Footer from '../components/Footer.js'
 import { iniciarSesion } from '../services/authService.js'
@@ -22,7 +19,7 @@ export default {
     },
 
     methods: {
-        enviar() {
+        async enviar() {
             this.errores = { usuario: '', contrasena: '', general: '' }
             let tieneError = false
 
@@ -38,7 +35,7 @@ export default {
 
             if (tieneError) return
 
-            const resultado = iniciarSesion(this.usuario.trim(), this.contrasena)
+            const resultado = await iniciarSesion(this.usuario.trim(), this.contrasena)
 
             if (!resultado.ok) {
                 this.errores.general = resultado.mensaje

@@ -1,6 +1,3 @@
-// Registro.js - Vista de creación de cuenta (antes users/registro.html).
-// Mismas reglas de validación que controller/auth.js, ahora en validators.js.
-
 import Header from '../components/Header.js'
 import Footer from '../components/Footer.js'
 import { registrarUsuario } from '../services/authService.js'
@@ -31,7 +28,7 @@ export default {
     },
 
     methods: {
-        enviar() {
+        async enviar() {
             this.errores = {}
             let tieneError = false
 
@@ -77,7 +74,7 @@ export default {
 
             if (tieneError) return
 
-            const resultado = registrarUsuario({
+            const resultado = await registrarUsuario({
                 correo: this.correo.trim(),
                 contrasena: this.contrasena,
                 nombreCompleto: this.nombreCompleto.trim(),
@@ -90,7 +87,7 @@ export default {
             })
 
             if (!resultado.ok) {
-                this.errores[resultado.campo] = resultado.mensaje
+                this.errores[resultado.campo || 'general'] = resultado.mensaje
                 return
             }
 
