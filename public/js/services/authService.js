@@ -6,15 +6,9 @@ import {
     signOut
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js'
 import {
-    collection,
     doc,
-    getDocs,
-    query,
-    setDoc,
-    where
+    setDoc
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
-
-const usuariosRef = collection(db, 'usuarios')
 
 function mensajeAuth(error) {
     const mensajes = {
@@ -26,12 +20,18 @@ function mensajeAuth(error) {
     return mensajes[error.code] || 'No se pudo completar la operación. Intenta nuevamente.'
 }
 
-export async function iniciarSesion(usuario, contrasena) {
+// El login solo acepta correo (no nombre de usuario): resolver un nombre de
+// usuario a su correo requeriría leer la colección "usuarios" antes de estar
+// autenticado, y las reglas de Firestore no lo permiten (con razón: esa
+// colección tiene datos privados de cada cliente).
+export async function iniciarSesion(correoOUsuario, contrasena) {
+    const correo = correoOUsuario.trim()
+
+    if (!correo.includes('@')) {
+        return { ok: false, mensaje: 'Inicia sesión con tu correo electrónico (el nombre de usuario no funciona aquí).' }
+    }
+
     try {
-        let correo = usuario.trim()
-        const porUsuario = query(usuariosRef, where('nombreUsuario', '==', correo))
-        const resultado = await getDocs(porUsuario)
-        if (!resultado.empty) correo = resultado.docs[0].data().correo
         await signInWithEmailAndPassword(auth, correo, contrasena)
         return { ok: true }
     } catch (error) {
@@ -41,11 +41,6 @@ export async function iniciarSesion(usuario, contrasena) {
 
 export async function registrarUsuario(datos) {
     try {
-        const existente = await getDocs(query(usuariosRef, where('nombreUsuario', '==', datos.nombreUsuario)))
-        if (!existente.empty) {
-            return { ok: false, campo: 'nombreUsuario', mensaje: 'Este nombre de usuario ya está en uso.' }
-        }
-
         const credencial = await createUserWithEmailAndPassword(auth, datos.correo, datos.contrasena)
         const { contrasena, ...perfil } = datos
         await setDoc(doc(db, 'usuarios', credencial.user.uid), {

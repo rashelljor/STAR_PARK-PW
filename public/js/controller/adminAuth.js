@@ -4,14 +4,7 @@ import {
     signInWithEmailAndPassword,
     signOut
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js'
-import {
-    collection,
-    doc,
-    getDoc,
-    getDocs,
-    query,
-    where
-} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
+import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
 
 const formulario = document.getElementById('formLogin')
 const errorGeneral = document.getElementById('errorGeneral')
@@ -31,31 +24,27 @@ async function esAdministrador(usuario) {
     return perfil.exists() && perfil.data().rol === 'admin'
 }
 
-async function obtenerCorreo(identificador) {
-    if (identificador.includes('@')) return identificador
-    const resultado = await getDocs(query(
-        collection(db, 'usuarios'),
-        where('nombreUsuario', '==', identificador)
-    ))
-    return resultado.empty ? identificador : resultado.docs[0].data().correo
-}
-
 formulario?.addEventListener('submit', async (evento) => {
     evento.preventDefault()
     mostrarError('')
     boton.disabled = true
 
-    const identificador = document.getElementById('usuario').value.trim()
+    const correo = document.getElementById('usuario').value.trim()
     const contrasena = document.getElementById('contrasena').value
 
-    if (!identificador || !contrasena) {
+    if (!correo || !contrasena) {
         mostrarError('Ingresa tu correo y contraseña.')
         boton.disabled = false
         return
     }
 
+    if (!correo.includes('@')) {
+        mostrarError('Ingresa tu correo electrónico de administrador.')
+        boton.disabled = false
+        return
+    }
+
     try {
-        const correo = await obtenerCorreo(identificador)
         const credencial = await signInWithEmailAndPassword(auth, correo, contrasena)
         if (!await esAdministrador(credencial.user)) {
             await signOut(auth)

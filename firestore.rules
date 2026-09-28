@@ -60,7 +60,7 @@ service cloud.firestore {
     match /configuracion/{document} {
       // Solo los administradores pueden editar la configuración
       allow write: if signedIn() && (
-        request.auth.uid in ['G3yhr3oVJmZDqFgIkhDOINI6bWJ3', 'eSsCKeqTVGUJSg6Cq3brTGFTgP52'] || admin()
+        request.auth.uid in ['G3yhr3oVJmZDqFgIkhDOINI6bWJ3', 'eSsCKeqTVGUJSg6Cq3brTGFTgP52', 'twsR7FgxkCOM3ozoP2FN5E7vFzL2'] || admin()
       );
       allow read: if true;
     }
