@@ -123,7 +123,7 @@
   transition: transform 0.5s ease;
 }
 
-.tarjetaAtraccion:hover .tarjetaImgCaja img {
+.tarjetaImgCaja:hover img {
   transform: scale(1.08);
 }
 /* Fila que muestra el total de la compra. */

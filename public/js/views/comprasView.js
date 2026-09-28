@@ -4,6 +4,7 @@
 import Header from '../components/Header.js'
 import Footer from '../components/Footer.js'
 import { obtenerCompras } from '../services/purchaseService.js'
+import { esperarUsuario } from '../services/authService.js'
 
 export default {
 
@@ -16,6 +17,13 @@ export default {
     },
 
     async mounted() {
+        const usuario = await esperarUsuario()
+        if (!usuario) {
+            alert('Inicia sesión para ver tus compras.')
+            window.location.href = 'login.html'
+            return
+        }
+
         this.compras = await obtenerCompras()
     },
 

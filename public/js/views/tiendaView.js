@@ -68,7 +68,7 @@ export default {
                 <section id="buscador">
                     <div class="text-center text-white p-5">
                         <h1>BUSCAR EN <em class="celeste">STAR </em><em>PARK</em></h1><br>
-                        <p>Ingrese el nombre del servicio que desea buscar y haga clic en el botón "Buscar".</p>
+                        <p>Ingrese el nombre del servicio que desea buscar.</p>
                         <input
                             v-model="busqueda"
                             @input="buscarServicio"
@@ -77,8 +77,6 @@ export default {
                             class="form-control"
                             placeholder="Ejemplo: Aventura Espacial"
                         >
-                        <br>
-                        <button @click="buscarServicio" class="btn btn-outline-info">Buscar Servicio</button>
                         <div id="resultado">
                             <ProductGrid
                                 v-if="busqueda.trim() && resultados.length"

@@ -1,7 +1,40 @@
 // Header.js - Menú de navegación compartido por todas las vistas de usuario.
 // Idéntico al header que antes estaba repetido en cada página de public/html/users.
+// Además, escucha la sesión: si hay un cliente logueado muestra su nombre y
+// el botón para cerrar sesión; si no, muestra "Iniciar sesión".
+
+import { auth, obtenerPerfil, cerrarSesion } from '../services/authService.js'
+import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js'
 
 export default {
+
+    data() {
+        return {
+            nombre: ''
+        }
+    },
+
+    mounted() {
+        this.detenerEscucha = onAuthStateChanged(auth, async usuario => {
+            if (!usuario) {
+                this.nombre = ''
+                return
+            }
+            const perfil = await obtenerPerfil(usuario.uid)
+            this.nombre = perfil?.nombreCompleto?.trim().split(' ')[0] || 'Astronauta'
+        })
+    },
+
+    unmounted() {
+        this.detenerEscucha?.()
+    },
+
+    methods: {
+        async salir() {
+            await cerrarSesion()
+            window.location.href = 'index.html'
+        }
+    },
 
     template: `
         <header class="bg-dark">
@@ -41,11 +74,16 @@ export default {
                             <a class="nav-link" href="miscompras.html">Mis Compras</a>
                         </li>
                     </ul>
-                    <div>
+                    <div class="d-flex align-items-center gap-3">
                         <!-- Enlace directo al carrito. -->
                         <a class="btn btn-primary rounded-pill botonAmarillo d-inline-flex align-items-center gap-2" href="carrito.html"><img src="../../assets/img/iconcarrito.png" alt="Carrito" class="icono-boton">Ver mi carrito</a>
-                        <!-- Enlace directo al log in. -->
-                        <a class="btn btn-primary rounded-pill botonAmarillo" href="login.html">👤 Iniciar sesión</a>
+
+                        <!-- Con sesión: saludo + cerrar sesión. Sin sesión: enlace a login. -->
+                        <template v-if="nombre">
+                            <span class="text-white">Hola, {{ nombre }}</span>
+                            <button type="button" class="btn btn-outline-light rounded-pill" @click="salir">Cerrar sesión</button>
+                        </template>
+                        <a v-else class="btn btn-primary rounded-pill botonAmarillo" href="login.html">👤 Iniciar sesión</a>
                     </div>
                 </div>
             </nav>

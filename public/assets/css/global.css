@@ -18,6 +18,13 @@
 /* Ajustes básicos para todos los elementos */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Efecto zoom al pasar el cursor: aplica a toda imagen del sitio, en
+   cualquier página, sin tener que repetirlo archivo por archivo. Una
+   regla más específica (como .tarjetaImgCaja:hover img) puede pisarlo
+   con otro valor si esa sección necesita un efecto distinto. */
+img { transition: transform 0.3s ease; }
+img:hover { transform: scale(1.05); }
+
 html, body {
   min-height: 100vh;
   margin: 0;

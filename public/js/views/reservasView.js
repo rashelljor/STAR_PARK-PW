@@ -10,6 +10,7 @@ import {
     actualizarReserva,
     eliminarReserva
 } from '../services/bookingService.js'
+import { esperarUsuario } from '../services/authService.js'
 
 export default {
 
@@ -22,7 +23,14 @@ export default {
         }
     },
 
-    mounted() {
+    async mounted() {
+        const usuario = await esperarUsuario()
+        if (!usuario) {
+            alert('Inicia sesión para ver tus reservas.')
+            window.location.href = 'login.html'
+            return
+        }
+
         this.cargar()
     },
 

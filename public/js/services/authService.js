@@ -7,6 +7,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js'
 import {
     doc,
+    getDoc,
     setDoc
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
 
@@ -68,6 +69,17 @@ export function esperarUsuario() {
             resolve(usuario)
         })
     })
+}
+
+// Perfil guardado en Firestore (nombreCompleto, nombreUsuario, etc.) del
+// usuario indicado. Usado por el Header para saludar por su nombre.
+export async function obtenerPerfil(uid) {
+    const snapshot = await getDoc(doc(db, 'usuarios', uid))
+    return snapshot.exists() ? snapshot.data() : null
+}
+
+export async function cerrarSesion() {
+    await signOut(auth)
 }
 
 export { auth, db, mensajeAuth }
