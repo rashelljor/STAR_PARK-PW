@@ -8,6 +8,7 @@ import ProductGrid from '../components/ProductGrid.js'
 import Loading from '../components/Loading.js'
 import { getProductsByCategory, searchProducts } from '../services/catalogService.js'
 import { agregarProducto } from '../services/cartService.js'
+import { esperarUsuario } from '../services/authService.js'
 
 export default {
 
@@ -42,8 +43,20 @@ export default {
         },
 
         async agregarAlCarrito(producto) {
-            await agregarProducto(producto)
-            alert(producto.nombre + ' añadido al carrito')
+            const usuario = await esperarUsuario()
+            if (!usuario) {
+                alert('Inicia sesión para agregar productos al carrito.')
+                window.location.href = 'login.html'
+                return
+            }
+
+            try {
+                await agregarProducto(producto)
+                alert(producto.nombre + ' añadido al carrito')
+            } catch (error) {
+                console.error(error)
+                alert('No se pudo agregar el producto. Intenta nuevamente.')
+            }
         }
     },
 

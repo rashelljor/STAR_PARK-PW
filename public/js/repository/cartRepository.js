@@ -8,7 +8,10 @@ function carritoRef() {
 
 export async function leerCarrito() {
     const snapshot = await getDocs(carritoRef())
-    return snapshot.docs.map(documento => ({ id: documento.id, ...documento.data() }))
+    // El id real del documento va al final: cada item ya trae su propio
+    // "id" (el del producto), y si fuera primero quedaría tapado por ese
+    // campo, haciendo que dos unidades del mismo producto compartan id.
+    return snapshot.docs.map(documento => ({ ...documento.data(), id: documento.id }))
 }
 
 export async function guardarCarrito(items) {

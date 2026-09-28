@@ -8,6 +8,7 @@ import Footer from '../components/Footer.js'
 import { obtenerCarrito, quitarProducto, calcularTotal, limpiarCarrito } from '../services/cartService.js'
 import { crearReserva } from '../services/bookingService.js'
 import { formatearPrecio } from '../utils/formatters.js'
+import { esperarUsuario } from '../services/authService.js'
 
 export default {
 
@@ -33,6 +34,13 @@ export default {
     },
 
     async mounted() {
+        const usuario = await esperarUsuario()
+        if (!usuario) {
+            alert('Inicia sesión para ver tu carrito.')
+            window.location.href = 'login.html'
+            return
+        }
+
         this.carrito = await obtenerCarrito()
         // Impide seleccionar una fecha anterior al día actual.
         this.fechaMinima = new Date().toISOString().slice(0, 10)

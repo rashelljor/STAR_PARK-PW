@@ -1,6 +1,7 @@
 import { auth, db } from '../config/firebaseConfig.js'
 import {
     createUserWithEmailAndPassword,
+    onAuthStateChanged,
     signInWithEmailAndPassword,
     signOut
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js'
@@ -58,6 +59,20 @@ export async function registrarUsuario(datos) {
     } catch (error) {
         return { ok: false, campo: 'general', mensaje: mensajeAuth(error) }
     }
+}
+
+// Espera a que Firebase confirme si hay sesión activa. Al cargar la página,
+// auth.currentUser puede ser null por un instante aunque el usuario sí esté
+// logueado (la sesión guardada tarda unos milisegundos en restaurarse), así
+// que las vistas que necesitan saber "¿hay usuario o no?" antes de actuar
+// (carrito, reservas...) deben usar esto en vez de leer auth.currentUser directo.
+export function esperarUsuario() {
+    return new Promise(resolve => {
+        const cancelar = onAuthStateChanged(auth, usuario => {
+            cancelar()
+            resolve(usuario)
+        })
+    })
 }
 
 export { auth, db, mensajeAuth }
