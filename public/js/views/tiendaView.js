@@ -66,7 +66,7 @@ export default {
 
             <main>
                 <section id="buscador">
-                    <div class="text-center text-white p-5">
+                    <div class="text-center text-white p-3 p-md-5">
                         <h1>BUSCAR EN <em class="celeste">STAR </em><em>PARK</em></h1><br>
                         <p>Ingrese el nombre del servicio que desea buscar.</p>
                         <input

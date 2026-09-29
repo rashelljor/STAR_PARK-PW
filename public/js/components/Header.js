@@ -40,7 +40,7 @@ export default {
                     <a href="index.html">
                         <img src="../../assets/img/logostar.png" alt="Star Park Logo" height="48">
                     </a>
-                    <ul class="navbar-nav flex-row gap-5">
+                    <ul class="navbar-nav flex-row flex-wrap gap-3 gap-lg-5">
                         <li class="nav-item dropdown">
                             <div class="d-flex align-items-center">
                                 <a class="nav-link" href="index.html">Inicio</a>
@@ -71,7 +71,7 @@ export default {
                             <a class="nav-link" href="miscompras.html">Mis Compras</a>
                         </li>
                     </ul>
-                    <div class="d-flex align-items-center gap-3">
+                    <div class="d-flex flex-wrap align-items-center gap-3">
                         <!-- Enlace directo al carrito. -->
                         <a class="btn btn-primary rounded-pill botonAmarillo d-inline-flex align-items-center gap-2" href="carrito.html"><img src="../../assets/img/iconcarrito.png" alt="Carrito" class="icono-boton">Ver mi carrito</a>
 

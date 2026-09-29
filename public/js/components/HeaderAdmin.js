@@ -7,7 +7,7 @@ export default {
             <nav class="navbar navbar-dark">
                 <div class="container-fluid gap-3">
                     <img src="../../assets/img/logostar.png" alt="Star Park Logo" height="48">
-                    <ul class="navbar-nav flex-row gap-5">
+                    <ul class="navbar-nav flex-row flex-wrap gap-3 gap-lg-5">
                         <li class="nav-item">
                             <a class="nav-link" href="control.html">Panel de Control</a>
                         </li>

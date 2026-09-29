@@ -105,7 +105,7 @@ export default {
                     </div>
 
                     <p v-if="cargado && !servicios.length" class="etiquetaGris">Próximamente nuevos servicios.</p>
-                    <div v-else class="grillaServicios">
+                    <div v-else class="grilla3col">
                         <article v-for="servicio in servicios" :key="servicio.id" class="tarjetaServicio glass">
                             <div class="tarjetaImgCaja">
                                 <img :src="imagenDe(servicio)" :alt="servicio.nombre">

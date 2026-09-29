@@ -98,7 +98,7 @@ export default {
                     <div v-if="alerta" :class="'alert alert-' + alerta.tipo" role="alert">{{ alerta.mensaje }}</div>
                 </div>
 
-                <div class="text-center text-white p-5">
+                <div class="text-center text-white p-3 p-md-5">
                     <h1>PANEL DE RESERVA EN <br> <em class="celeste">STAR </em><em>PARK</em></h1><br>
                     <p class="etiqueta">Todas tus reservas registradas</p>
                 </div>

@@ -14,3 +14,6 @@ body {
   color: var(--texto); 
   font-family: var(--fuente); 
 }
+
+/* Separa el título del panel de la primera tarjeta. */
+#adminContent > h1 { margin-bottom: 12px; }

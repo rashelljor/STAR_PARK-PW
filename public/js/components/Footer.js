@@ -9,7 +9,7 @@ export default {
                     <p class="fw-bold mb-1">STAR PARK</p>
                     <p>©2026 FAMILY PARK S.A.C.</p>
                 </div>
-                <div class="d-flex gap-3 mt-3 mt-lg-0">
+                <div class="d-flex flex-wrap justify-content-center gap-3 mt-3 mt-lg-0">
                     <p>Protocolo de Seguridad y Privacidad</p>
                     <p>Términos de Uso</p>
                 </div>

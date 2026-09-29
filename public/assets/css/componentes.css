@@ -23,6 +23,7 @@
   position: relative;
   overflow: hidden;
   display: flex; flex-direction: column; justify-content: center; align-items: center;
+  text-align: center;
 }
 
 .seccionCabecera h2 {
@@ -129,7 +130,9 @@
 /* Fila que muestra el total de la compra. */
 .totalFila {
     display: flex;
+    flex-wrap: wrap;
     font-weight: 700;
+    gap: 8px 16px;
     justify-content: space-between;
     padding-top: 8px;
 }
@@ -211,4 +214,18 @@
     font-size: 18px;
     font-weight: 700;
     padding-bottom: 12px;
+}
+
+/* Los formularios de acceso no se estiran a todo el ancho en escritorio. */
+#loginForm,
+#registroForm {
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 720px;
+}
+
+@media (max-width: 640px) {
+    .bloqueFormulario {
+        padding: 20px;
+    }
 }

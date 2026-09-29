@@ -89,7 +89,7 @@ export default {
             <Header />
 
             <main>
-                <div class="text-center text-white p-5">
+                <div class="text-center text-white p-3 p-md-5">
                     <h1>TU CARRITO EN <br> <em class="celeste">STAR </em><em>PARK</em></h1><br>
                     <p class="etiqueta">Revisa tu selección y completa tu reserva</p>
                 </div>

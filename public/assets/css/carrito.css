@@ -21,3 +21,10 @@
     background: transparent;
     color: #ff6b6b;
 }
+
+/* En móvil, productos y formulario se apilan en una sola columna. */
+@media (max-width: 640px) {
+    .layoutCarrito {
+        grid-template-columns: 1fr;
+    }
+}
