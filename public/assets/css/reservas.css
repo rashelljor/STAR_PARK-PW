@@ -5,8 +5,11 @@ body {
 }
 
 main {
+    max-width: none;
     padding-top: 30px;
     padding-bottom: 60px;
+    padding-left: 32px;
+    padding-right: 32px;
 }
 
 .panelAdmin {

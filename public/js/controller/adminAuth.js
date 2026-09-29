@@ -15,7 +15,8 @@ function mostrarError(mensaje) {
 }
 
 function mensajeError(error) {
-    if (error.code === 'auth/invalid-credential') return 'El correo o la contraseña son incorrectos.'
+    if (error.code === 'auth/invalid-credential') 
+    return 'El correo o la contraseña son incorrectos.'
     return 'No se pudo iniciar sesión. Intenta nuevamente.'
 }
 

@@ -83,11 +83,12 @@ export default {
                                 :products="resultados"
                                 @add-to-cart="agregarAlCarrito"
                             />
+                            <hr>
+                            <hr>
                             <p v-else-if="busqueda.trim()" class="etiquetaGris">No encontramos servicios con ese nombre.</p>
                         </div>
                     </div>
                 </section>
-
                 <!-- Productos promocionales. -->
                 <div id="promociones">
                     <div class="seccionCabecera">

@@ -11,6 +11,7 @@ import {
     eliminarReserva
 } from '../services/bookingService.js'
 import { esperarUsuario } from '../services/authService.js'
+import { formatearFechaHora } from '../utils/formatters.js'
 
 export default {
 
@@ -47,8 +48,14 @@ export default {
             this.alerta = { mensaje, tipo }
         },
 
+        fechaLegible(fecha) {
+            if (!fecha) return ''
+            const fechaJs = typeof fecha.toDate === 'function' ? fecha.toDate() : new Date(fecha)
+            return formatearFechaHora(fechaJs)
+        },
+
         async pagar(indice) {
-            await pagarReserva(this.reservas[indice].id)
+            await pagarReserva(this.reservas[indice])
             await this.cargar()
             alert('Pago confirmado. Revisa Mis Compras.')
         },
@@ -91,9 +98,9 @@ export default {
                     <div v-if="alerta" :class="'alert alert-' + alerta.tipo" role="alert">{{ alerta.mensaje }}</div>
                 </div>
 
-                <div class="admin-header text-white">
-                    <h1>PANEL DE <em class="celeste">RESERVAS</em></h1>
-                    <p class="etiqueta">Todas las reservas registradas</p>
+                <div class="text-center text-white p-5">
+                    <h1>PANEL DE RESERVA EN <br> <em class="celeste">STAR </em><em>PARK</em></h1><br>
+                    <p class="etiqueta">Todas tus reservas registradas</p>
                 </div>
 
                 <div class="panelAdmin">
@@ -122,12 +129,14 @@ export default {
                                     <td>{{ reserva.telefono }}</td>
                                     <td>{{ reserva.fecha }}</td>
                                     <td class="amarillo">{{ reserva.total }}</td>
-                                    <td>{{ reserva.fechaRegistro }}</td>
+                                    <td>{{ fechaLegible(reserva.fechaRegistro) }}</td>
                                     <td>
-                                        <span v-if="reserva.pagado" class="amarillo">Pagado</span>
-                                        <button v-else class="botonPagar" @click="pagar(indice)">Pagar</button>
-                                        <button class="botonEditar" @click="editar(indice)">Editar</button>
-                                        <button class="botonEliminar" @click="eliminar(indice)">Quitar</button>
+                                        <div class="d-flex flex-wrap align-items-center gap-2">
+                                            <span v-if="reserva.pagado" class="amarillo">Pagado</span>
+                                            <button v-else class="botonPagar" @click="pagar(indice)">Pagar</button>
+                                            <button class="botonEditar" @click="editar(indice)">Editar</button>
+                                            <button class="botonEliminar" @click="eliminar(indice)">Quitar</button>
+                                        </div>
                                     </td>
                                 </tr>
                             </tbody>

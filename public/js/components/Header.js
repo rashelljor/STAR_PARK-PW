@@ -1,7 +1,4 @@
 // Header.js - Menú de navegación compartido por todas las vistas de usuario.
-// Idéntico al header que antes estaba repetido en cada página de public/html/users.
-// Además, escucha la sesión: si hay un cliente logueado muestra su nombre y
-// el botón para cerrar sesión; si no, muestra "Iniciar sesión".
 
 import { auth, obtenerPerfil, cerrarSesion } from '../services/authService.js'
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js'

@@ -17,9 +17,16 @@ export async function crearReserva({ nombre, correo, telefono, fecha, items, tot
     return { id: documento.id, ...reserva }
 }
 
-export async function pagarReserva(id) {
-    await updateDoc(doc(db, 'reservas', id), { pagado: true, estado: 'pagado', actualizadoEn: serverTimestamp() })
-    await addDoc(collection(db, 'transacciones'), { reservaId: id, uid: auth.currentUser.uid, estado: 'validada', fecha: serverTimestamp() })
+export async function pagarReserva(reserva) {
+    await updateDoc(doc(db, 'reservas', reserva.id), { pagado: true, estado: 'pagado', actualizadoEn: serverTimestamp() })
+    await addDoc(collection(db, 'transacciones'), {
+        reservaId: reserva.id,
+        uid: auth.currentUser.uid,
+        estado: 'validada',
+        items: reserva.items,
+        total: reserva.total,
+        fecha: serverTimestamp()
+    })
 }
 
 export function actualizarReserva(id, datos) {

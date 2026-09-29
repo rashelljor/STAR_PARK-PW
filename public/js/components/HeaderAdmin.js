@@ -1,5 +1,4 @@
-// Header.js - Menú de navegación compartido por todas las vistas de usuario.
-// Idéntico al header que antes estaba repetido en cada página de public/html/users.
+// HeaderAdmin.js - Menú de navegación para administradores.
 
 export default {
 

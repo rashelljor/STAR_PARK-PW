@@ -8,7 +8,7 @@ import Footer from '../components/Footer.js'
 import { obtenerCarrito, quitarProducto, calcularTotal, limpiarCarrito } from '../services/cartService.js'
 import { crearReserva } from '../services/bookingService.js'
 import { formatearPrecio } from '../utils/formatters.js'
-import { esperarUsuario } from '../services/authService.js'
+import { esperarUsuario, obtenerPerfil } from '../services/authService.js'
 
 export default {
 
@@ -23,6 +23,7 @@ export default {
                 telefono: '',
                 fecha: ''
             },
+            perfil: null,
             fechaMinima: ''
         }
     },
@@ -44,6 +45,13 @@ export default {
         this.carrito = await obtenerCarrito()
         // Impide seleccionar una fecha anterior al día actual.
         this.fechaMinima = new Date().toISOString().slice(0, 10)
+
+        // Precarga nombre, correo y teléfono desde el perfil del cliente.
+        // La fecha de visita la sigue escribiendo el cliente a mano.
+        this.perfil = await obtenerPerfil(usuario.uid)
+        this.formulario.nombre = this.perfil?.nombreCompleto || ''
+        this.formulario.correo = this.perfil?.correo || usuario.email || ''
+        this.formulario.telefono = this.perfil?.telefono || ''
     },
 
     methods: {

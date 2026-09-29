@@ -1,20 +1,34 @@
 /* Estilos exclusivos de la página de la tienda. */
 
 /* Botón para añadir el producto al carrito. */
+/* Usa las variables del componente .btn de Bootstrap para heredar sus
+   estados hover/active/focus, solo reemplazando los colores de marca. */
 .tarjetaServicio button {
-    background: var(--amarillo);
-    border: 0;
+    --bs-btn-color: #3c2f00;
+    --bs-btn-bg: var(--amarillo);
+    --bs-btn-border-color: var(--amarillo);
+    --bs-btn-hover-color: #f7e7b0;
+    --bs-btn-hover-bg: #5e5413;
+    --bs-btn-hover-border-color: #e6cb1e;
+    --bs-btn-active-color: #4a3c04;
+    --bs-btn-active-bg: #fff4ab;
+    --bs-btn-active-border-color: #ccb41a;
+    --bs-btn-focus-shadow-rgb: 255, 225, 33;
     border-radius: 8px;
-    color: #3c2f00;
-    cursor: pointer;
     padding: 10px;
 }
 
 .tarjetaAtraccion button {
-    background: var(--celeste);
-    border: 0;
+    --bs-btn-color: rgba(17, 18, 59, 0.837);
+    --bs-btn-bg: var(--celeste);
+    --bs-btn-border-color: var(--celeste);
+    --bs-btn-hover-color: rgba(253, 253, 255, 0.837);
+    --bs-btn-hover-bg: #14404e;
+    --bs-btn-hover-border-color: #5e8a97;
+    --bs-btn-active-color: rgba(22, 25, 169, 0.837);
+    --bs-btn-active-bg: #ddf8ff;
+    --bs-btn-active-border-color: #70b6ca;
+    --bs-btn-focus-shadow-rgb: 140, 227, 253;
     border-radius: 8px;
-    color: rgba(17, 18, 59, 0.837);
-    cursor: pointer;
     padding: 10px;
 }

@@ -3,8 +3,12 @@
 
 import Header from '../components/Header.js'
 import Footer from '../components/Footer.js'
+import { db } from '../config/firebaseConfig.js'
+import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
 import { obtenerCompras } from '../services/purchaseService.js'
-import { esperarUsuario } from '../services/authService.js'
+import { esperarUsuario, obtenerPerfil } from '../services/authService.js'
+import { formatearPrecio, formatearFechaHora } from '../utils/formatters.js'
+import { CONTENIDO_INICIAL } from '../utils/contenidoInicial.js'
 
 export default {
 
@@ -12,7 +16,9 @@ export default {
 
     data() {
         return {
-            compras: []
+            compras: [],
+            perfil: null,
+            direccion: CONTENIDO_INICIAL.ubicacion
         }
     },
 
@@ -25,11 +31,30 @@ export default {
         }
 
         this.compras = await obtenerCompras()
+        this.perfil = await obtenerPerfil(usuario.uid)
+
+        const contenido = await getDoc(doc(db, 'contenido', 'institucional'))
+        if (contenido.exists() && contenido.data().ubicacion) this.direccion = contenido.data().ubicacion
     },
 
     methods: {
+        formatearPrecio,
+
         numeroCompra(indice) {
             return (indice + 1).toString().padStart(2, '0')
+        },
+
+        // Serie y correlativo del comprobante: se deriva del id único del
+        // documento en Firestore para que cada boleta tenga un identificador
+        // estable e irrepetible (no reemplaza un correlativo SUNAT real).
+        serieCompra(compra) {
+            return 'B001-' + (compra.id || '').slice(-8).toUpperCase().padStart(8, '0')
+        },
+
+        fechaLegible(fecha) {
+            if (!fecha) return ''
+            const fechaJs = typeof fecha.toDate === 'function' ? fecha.toDate() : new Date(fecha)
+            return formatearFechaHora(fechaJs)
         }
     },
 
@@ -44,53 +69,67 @@ export default {
                 </div>
 
                 <div id="listaCompras">
-                    <p v-if="compras.length === 0">No has realizado ninguna compra todavía</p>
+                    <p v-if="compras.length === 0" class="etiqueta glass text-center p-4">No has realizado ninguna compra todavía</p>
 
-                    <template v-for="(compra, indice) in compras" :key="indice">
-                        <div>
-                            <div class="infoFila">
-                                <h3>Compra {{ numeroCompra(indice) }}</h3>
-                                <p>Boleta de Venta</p>
-                            </div>
-
-                            <div class="infoFila">
-                                <p class="em">Cliente</p>
-                                <div>
-                                    <h3>FAMILY PARK S.A.C.</h3>
-                                    <p>RUC: 20555297018</p>
-                                </div>
-                            </div>
-
-                            <div class="infoFila">
-                                <div>
-                                    <h3>Fecha de emisión</h3>
-                                    <p>{{ compra.fecha }}</p>
-                                </div>
-                            </div>
-
-                            <div class="infoFila">
-                                <div>
-                                    <h3>Servicios adquiridos</h3>
-                                    <ul>
-                                        <li v-for="(item, i) in compra.items" :key="i">
-                                            {{ item.nombre }} — S/ {{ Number(item.precio).toFixed(2) }}
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-
+                    <section v-for="(compra, indice) in compras" :key="indice" class="glass bloqueFormulario">
+                        <div class="totalFila">
                             <div>
-                                <h3>TOTAL</h3>
-                                <p>{{ compra.total }}</p>
+                                <h3 class="celeste">BOLETA DE VENTA ELECTRÓNICA</h3>
+                                <p class="etiqueta">Serie {{ serieCompra(compra) }}</p>
                             </div>
-
-                            <p>¡Gracias por tu preferencia!</p>
+                            <div class="text-md-end">
+                                <p class="etiquetaGris">FECHA DE EMISIÓN</p>
+                                <p class="celeste">{{ fechaLegible(compra.fecha) }}</p>
+                            </div>
                         </div>
-                        <br>
-                        <hr>
-                        <hr>
-                        <br>
-                    </template>
+
+                        <div class="separadorFormulario"></div>
+
+                        <div class="totalFila">
+                            <div>
+                                <p class="etiquetaGris">EMISOR</p>
+                                <h3>FAMILY PARK S.A.C.</h3>
+                                <p>RUC: 20555297018</p>
+                                <p>{{ direccion }}</p>
+                            </div>
+                            <div class="text-md-end">
+                                <p class="etiquetaGris">CLIENTE</p>
+                                <h3>{{ perfil?.nombreCompleto || 'Cliente Star Park' }}</h3>
+                                <p>{{ perfil?.tipoDocumento || 'DNI' }}: {{ perfil?.numeroDocumento || 'No especificado' }}</p>
+                            </div>
+                        </div>
+
+                        <div class="separadorFormulario"></div>
+
+                        <div>
+                            <p class="etiquetaGris">DETALLE DE LA OPERACIÓN</p>
+                            <table class="table table-dark table-sm mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Descripción</th>
+                                        <th>Cantidad</th>
+                                        <th>P. Unitario</th>
+                                        <th>Importe</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(item, i) in compra.items" :key="i">
+                                        <td>{{ item.nombre }}</td>
+                                        <td>1</td>
+                                        <td>{{ formatearPrecio(item.precio) }}</td>
+                                        <td>{{ formatearPrecio(item.precio) }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="totalFila">
+                            <p>IMPORTE TOTAL A PAGAR (SOLES)</p>
+                            <p class="amarillo">{{ compra.total }}</p>
+                        </div>
+
+                        <p class="etiquetaGris text-center">¡Gracias por tu preferencia!</p>
+                    </section>
                 </div>
             </main>
 

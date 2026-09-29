@@ -1,5 +1,4 @@
-// Loading.js - Mensaje de carga reutilizable (usa la etiqueta gris ya existente,
-// no agrega ninguna clase CSS nueva).
+// Loading.js - Mensaje de carga reutilizable (usa la etiqueta gris ya existente en el CSS).
 
 export default {
 

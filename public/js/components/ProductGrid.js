@@ -1,6 +1,4 @@
-// ProductGrid.js - Dibuja una grilla de productos usando las mismas clases
-// visuales que ya existían en tienda.html ('tarjetaAtraccion' para
-// promociones, 'tarjetaServicio' para el catálogo/botín), sin tocar el CSS.
+// ProductGrid.js - Dibuja una grilla de productos
 
 import { getImagenPorDefecto } from '../services/catalogService.js'
 
@@ -46,7 +44,7 @@ export default {
                     <h3>{{ producto.nombre }}</h3>
                     <p>{{ producto.descripcion }}</p>
                     <p>S/ {{ Number(producto.precio).toFixed(2) }}</p>
-                    <button type="button" @click="$emit('add-to-cart', producto)">
+                    <button type="button" class="btn" @click="$emit('add-to-cart', producto)">
                         + Añadir al carrito
                     </button>
                 </div>
