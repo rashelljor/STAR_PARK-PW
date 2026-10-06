@@ -78,12 +78,13 @@ export default {
                             placeholder="Ejemplo: Aventura Espacial"
                         >
                         <div id="resultado">
+                        <br><br>
                             <ProductGrid
                                 v-if="busqueda.trim() && resultados.length"
                                 :products="resultados"
                                 @add-to-cart="agregarAlCarrito"
                             />
-                            <hr>
+                            <br>
                             <hr>
                             <p v-else-if="busqueda.trim()" class="etiquetaGris">No encontramos servicios con ese nombre.</p>
                         </div>
