@@ -101,7 +101,7 @@ export default {
                                 <a class="btn btn-outline-info" href="registro.html">Crear cuenta</a>
                             </div>
                         </div>
-                        <a class="btn" href="../admin/admin.html" target="_blank">Panel administrativo</a>
+                        <a class="btn btn-outline-secondary" href="../admin/admin.html" target="_blank">Panel administrativo</a>
                     </div>
                 </section>
             </main>
