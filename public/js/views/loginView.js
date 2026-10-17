@@ -1,7 +1,7 @@
 import Header from '../components/Header.js'
 import Footer from '../components/Footer.js'
-import { iniciarSesion } from '../services/authService.js'
-import { notificar } from '../utils/notificaciones.js'
+import { iniciarSesion, obtenerPerfil, auth } from '../services/authService.js'
+import { notificar, notificarAlCargar } from '../utils/notificaciones.js'
 
 export default {
 
@@ -46,6 +46,11 @@ export default {
                 return
             }
 
+            // La bienvenida se muestra al llegar al inicio, sin retrasar la redirección.
+            // Si el perfil no carga, se saluda igual sin nombre.
+            const perfil = await obtenerPerfil(auth.currentUser.uid).catch(() => null)
+            const nombre = perfil?.nombreCompleto?.trim().split(' ')[0]
+            notificarAlCargar('¡Bienvenido de vuelta' + (nombre ? ', ' + nombre : '') + '! Tu sesión se inició correctamente.', 'exito')
             window.location.href = 'index.html'
         }
     },

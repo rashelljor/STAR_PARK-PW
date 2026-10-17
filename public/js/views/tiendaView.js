@@ -6,10 +6,11 @@ import Header from '../components/Header.js'
 import Footer from '../components/Footer.js'
 import ProductGrid from '../components/ProductGrid.js'
 import Loading from '../components/Loading.js'
-import { getProductsByCategory, searchProducts } from '../services/catalogService.js'
+import { getActiveProducts, searchProducts } from '../services/catalogService.js'
 import { agregarProducto } from '../services/cartService.js'
 import { esperarUsuario } from '../services/authService.js'
-import { notificar } from '../utils/notificaciones.js'
+import { notificar, notificarAlCargar } from '../utils/notificaciones.js'
+import { irAlHash } from '../utils/navegacion.js'
 
 export default {
 
@@ -28,8 +29,10 @@ export default {
 
     async mounted() {
         try {
-            this.promociones = await getProductsByCategory('promociones')
-            this.botin = await getProductsByCategory('botin')
+            // Una sola lectura del catálogo; promociones, botín y buscador salen de ella.
+            const productos = await getActiveProducts()
+            this.promociones = productos.filter(producto => producto.categoria === 'promociones')
+            this.botin = productos.filter(producto => producto.categoria === 'botin')
         } catch (error) {
             console.error(error)
             this.error = 'No se pudo cargar el catálogo.'
@@ -37,17 +40,28 @@ export default {
         } finally {
             this.cargando = false
         }
+
+        // Ir a #promociones, #botin o al producto abierto desde "Ver en tienda" del panel admin.
+        await this.$nextTick()
+        const destino = irAlHash()
+        if (destino?.id.startsWith('producto-')) destino.classList.add('resaltado')
     },
 
     methods: {
-        async buscarServicio() {
-            this.resultados = await searchProducts(this.busqueda)
+        buscarServicio() {
+            this.resultados = searchProducts(this.busqueda, [...this.promociones, ...this.botin])
+        },
+
+        limpiarBusqueda() {
+            this.busqueda = ''
+            this.resultados = []
+            this.$refs.buscador.focus()
         },
 
         async agregarAlCarrito(producto) {
             const usuario = await esperarUsuario()
             if (!usuario) {
-                await notificar('Inicia sesión para agregar productos al carrito.', 'advertencia')
+                notificarAlCargar('Inicia sesión para agregar productos al carrito.', 'advertencia')
                 window.location.href = 'login.html'
                 return
             }
@@ -71,24 +85,37 @@ export default {
                     <div class="text-center text-white p-3 p-md-5">
                         <h1>BUSCAR EN <em class="celeste">STAR </em><em>PARK</em></h1><br>
                         <p>Ingrese el nombre del servicio que desea buscar.</p>
-                        <input
-                            v-model="busqueda"
-                            @input="buscarServicio"
-                            type="text"
-                            id="servicioInput"
-                            class="form-control"
-                            placeholder="Ejemplo: Aventura Espacial"
-                        >
-                        <div id="resultado">
-                        <br><br>
-                            <ProductGrid
-                                v-if="busqueda.trim() && resultados.length"
-                                :products="resultados"
-                                @add-to-cart="agregarAlCarrito"
-                            />
-                            <br>
-                            <hr>
-                            <p v-else-if="busqueda.trim()" class="etiquetaGris">No encontramos servicios con ese nombre.</p>
+                        <div class="buscadorFila">
+                            <input
+                                v-model="busqueda"
+                                @input="buscarServicio"
+                                @keydown.esc="limpiarBusqueda"
+                                ref="buscador"
+                                type="text"
+                                id="servicioInput"
+                                class="form-control"
+                                placeholder="Ejemplo: aventura, mision, nave..."
+                                aria-label="Buscar en el catálogo"
+                            >
+                            <button v-if="busqueda" type="button" class="btn botonCelesteBorde" @click="limpiarBusqueda">✕ Limpiar</button>
+                        </div>
+                        <p class="etiquetaGris mt-2">No importan las mayúsculas ni las tildes.</p>
+
+                        <!-- Antes había un <br><hr> entre v-if y v-else-if: Vue descartaba el
+                             mensaje de "sin resultados" y nunca llegaba a mostrarse. -->
+                        <div id="resultado" class="mt-4" aria-live="polite">
+                            <template v-if="busqueda.trim()">
+                                <template v-if="resultados.length">
+                                    <p class="etiquetaGris mb-3">{{ resultados.length }} {{ resultados.length === 1 ? 'resultado' : 'resultados' }} para «{{ busqueda.trim() }}»</p>
+                                    <ProductGrid :products="resultados" @add-to-cart="agregarAlCarrito" />
+                                </template>
+                                <div v-else class="sinResultados glass">
+                                    <p>No encontramos resultados para <strong>«{{ busqueda.trim() }}»</strong>.</p>
+                                    <p class="etiquetaGris">Prueba con otra palabra o revisa el catálogo completo.</p>
+                                    <button type="button" class="btn botonAmarillo mt-2" @click="limpiarBusqueda">Ver todo el catálogo</button>
+                                </div>
+                                <hr class="my-5">
+                            </template>
                         </div>
                     </div>
                 </section>
@@ -106,6 +133,7 @@ export default {
                     v-else
                     :products="promociones"
                     card-class="tarjetaAtraccion"
+                    con-anclas
                     @add-to-cart="agregarAlCarrito"
                 /><br>
 
@@ -119,6 +147,7 @@ export default {
                     v-if="!cargando && !error"
                     :products="botin"
                     card-class="tarjetaServicio"
+                    con-anclas
                     @add-to-cart="agregarAlCarrito"
                 />
             </main>

@@ -1,8 +1,19 @@
+/* La fuente del sitio se declaraba pero nunca se cargaba: cada navegador
+   mostraba una letra distinta. Debe ir antes que cualquier otra regla. */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&display=swap');
+
 /* 1. CONFIGURACIÓN Y VARIABLES (Colores y Letras) */
+/* Paleta con más saturación (pedido de usuarios). Contraste medido sobre el
+   fondo #11131b: celeste 10.8, amarillo 13.1, verde 10.5, rojo 6.2 y
+   violeta 5.7 (todos superan el mínimo AA de 4.5:1). El violeta se usa
+   solo como acento decorativo (bordes, degradados), no para textos largos. */
 :root {
-  --celeste: #8ce3fd;
+  --celeste: #38d6ff;
   --azul: #002a78;
-  --amarillo: #ffe121;
+  --amarillo: #ffd60a;
+  --violeta: #a374ff;
+  --verde: #3ddc97;
+  --rojo: #ff5c7a;
   --fondo: #11131b;
   --tarjeta: #282a32;
   --superficie: #191b23;

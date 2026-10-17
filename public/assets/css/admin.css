@@ -1,19 +1,297 @@
 body {
-  background-color: var(--fondo); 
-  
+  background-color: var(--fondo);
+
   /* Sintaxis limpia de fondo completo */
-  background-image: 
-    linear-gradient(rgba(17, 19, 27, 0.716), rgba(17, 19, 27, 0.746)), 
-    url('../img/fondoadmin.png'); 
+  background-image:
+    linear-gradient(rgba(17, 19, 27, 0.716), rgba(17, 19, 27, 0.746)),
+    url('../img/fondoadmin.png');
 
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   background-attachment: fixed;
-  
-  color: var(--texto); 
-  font-family: var(--fuente); 
+
+  color: var(--texto);
+  font-family: var(--fuente);
 }
 
 /* Separa el título del panel de la primera tarjeta. */
 #adminContent > h1 { margin-bottom: 12px; }
+
+/* ===== Estructura del panel (HeaderAdmin.js) =====
+   Barra violeta + menú lateral: el panel se distingue a simple vista del
+   sitio de clientes, que usa una barra oscura con borde celeste. */
+:root {
+  --admin-barra: #2b1660;
+  --admin-barra-2: #4a1f8f;
+  --admin-sidebar: #160d2e;
+  --admin-ancho-sidebar: 270px;
+  --admin-alto-barra: 64px;
+}
+
+.adminLayout {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: var(--admin-ancho-sidebar) minmax(0, 1fr);
+  grid-template-rows: var(--admin-alto-barra) 1fr;
+  grid-template-areas:
+    "barra barra"
+    "sidebar contenido";
+}
+
+.adminBarra {
+  grid-area: barra;
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 20px;
+  background: linear-gradient(90deg, var(--admin-barra), var(--admin-barra-2));
+  border-bottom: 3px solid var(--amarillo);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+}
+
+.adminLogo { height: 40px; width: auto; }
+.adminLogo:hover { transform: none; }
+
+/* Etiqueta fija que recuerda en qué modo se está. */
+.adminModo {
+  background: var(--amarillo);
+  color: #1a0f3a;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 6px 14px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.adminBarraAcciones {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  min-width: 0;
+}
+
+.adminCorreo {
+  color: #e6dcff;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adminBotonSitio { border: 1px solid #cdb8ff; color: #ffffff; border-radius: 999px; }
+.adminBotonSitio:hover { background: #ffffff; color: var(--admin-barra); }
+
+.adminBotonSalir { background: var(--rojo); border: 1px solid var(--rojo); color: #1a0f3a; font-weight: 700; border-radius: 999px; }
+.adminBotonSalir:hover { background: #ff8099; color: #1a0f3a; }
+
+.adminMenuBoton {
+  display: none;
+  background: transparent;
+  border: 1px solid #cdb8ff;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 20px;
+  line-height: 1;
+  padding: 8px 12px;
+}
+
+/* Menú lateral. */
+.adminSidebar {
+  grid-area: sidebar;
+  position: sticky;
+  top: var(--admin-alto-barra);
+  height: calc(100vh - var(--admin-alto-barra));
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px 12px;
+  background: var(--admin-sidebar);
+  border-right: 1px solid rgba(163, 116, 255, 0.3);
+}
+
+.adminSidebar ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+
+.adminSidebar a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border-left: 4px solid transparent;
+  color: #e6dcff;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+
+.adminSidebar a span { font-size: 18px; }
+.adminSidebar a:hover { background: rgba(163, 116, 255, 0.15); color: #ffffff; transform: translateX(3px); }
+
+.adminSidebar a.active {
+  background: rgba(255, 214, 10, 0.12);
+  border-left-color: var(--amarillo);
+  color: var(--amarillo);
+}
+
+.adminSidebarSalir {
+  margin-top: 24px;
+  min-height: 48px;
+  background: transparent;
+  border: 1px solid var(--rojo);
+  border-radius: 10px;
+  color: var(--rojo);
+  font-weight: 700;
+}
+
+.adminSidebarSalir:hover { background: var(--rojo); color: #1a0f3a; }
+
+.adminSidebarFondo { display: none; }
+
+.adminContenido {
+  grid-area: contenido;
+  max-width: none;
+  margin: 0;
+  padding: 28px 32px 60px;
+  min-width: 0;
+}
+
+/* ===== Tarjetas KPI (Panel de control) ===== */
+.kpiGrilla {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.kpiTarjeta {
+  --kpi: var(--celeste);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 22px;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-top: 4px solid var(--kpi);
+  border-radius: var(--redondeo);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+}
+
+.kpi-celeste { --kpi: var(--celeste); }
+.kpi-verde { --kpi: var(--verde); }
+.kpi-violeta { --kpi: var(--violeta); }
+.kpi-amarillo { --kpi: var(--amarillo); }
+
+.kpiIcono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  font-size: 28px;
+  background: color-mix(in srgb, var(--kpi) 18%, transparent);
+}
+
+.kpiTitulo {
+  color: var(--gris);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.kpiValor {
+  color: var(--kpi);
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1.1;
+  margin: 2px 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpiDetalle { color: var(--gris); font-size: 13px; margin: 0; }
+
+/* ===== Contenido institucional ===== */
+.formularioLista {
+  background: rgba(56, 214, 255, 0.05);
+  border: 1px dashed var(--celeste);
+  border-radius: 10px;
+}
+
+.badgeTu {
+  background: var(--violeta);
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+}
+
+/* ===== 1440px: KPI en 4 columnas (base). 1100px: 2 columnas ===== */
+@media (max-width: 1100px) {
+  .kpiGrilla { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ===== 800px o menos: el menú lateral se abre con ☰ ===== */
+@media (max-width: 800px) {
+  .adminLayout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "barra"
+      "contenido";
+  }
+
+  .adminMenuBoton { display: inline-block; }
+
+  .adminSidebar {
+    position: fixed;
+    top: var(--admin-alto-barra);
+    left: 0;
+    bottom: 0;
+    z-index: 1029;
+    width: min(300px, 85vw);
+    height: auto;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    box-shadow: 8px 0 30px rgba(0, 0, 0, 0.5);
+  }
+
+  .adminSidebar.abierto { transform: none; }
+
+  .adminSidebar.abierto + .adminSidebarFondo {
+    display: block;
+    position: fixed;
+    inset: var(--admin-alto-barra) 0 0 0;
+    z-index: 1028;
+    background: rgba(8, 9, 14, 0.6);
+  }
+
+  .adminCorreo { display: none; }
+  .adminContenido { padding: 24px 16px 48px; }
+}
+
+/* ===== 640px o menos ===== */
+@media (max-width: 640px) {
+  .adminBarra { gap: 10px; padding: 0 12px; }
+  .adminLogo { display: none; }
+  .adminModo { font-size: 11px; padding: 5px 10px; }
+  /* El acceso al sitio y "Cerrar sesión" siguen en el menú lateral. */
+  .adminBotonSitio { display: none; }
+  .kpiGrilla { grid-template-columns: minmax(0, 1fr); }
+  .kpiValor { font-size: 34px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adminSidebar { transition: none; }
+}

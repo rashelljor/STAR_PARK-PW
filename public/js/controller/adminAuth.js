@@ -5,19 +5,18 @@ import {
     signOut
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js'
 import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
-import { notificar } from '../utils/notificaciones.js'
+import { mensajeAuth } from '../services/authService.js'
+import { notificar, notificarAlCargar } from '../utils/notificaciones.js'
 
 const formulario = document.getElementById('formLogin')
 const boton = formulario?.querySelector('button[type="submit"]')
 
+// Mientras el formulario procesa un inicio de sesión, la redirección la hace
+// el propio formulario (para dejar antes el mensaje de bienvenida).
+let iniciandoSesion = false
+
 function mostrarError(mensaje) {
     notificar(mensaje, 'error')
-}
-
-function mensajeError(error) {
-    if (error.code === 'auth/invalid-credential') 
-    return 'El correo o la contraseña son incorrectos.'
-    return 'No se pudo iniciar sesión. Intenta nuevamente.'
 }
 
 async function esAdministrador(usuario) {
@@ -44,6 +43,7 @@ formulario?.addEventListener('submit', async (evento) => {
         return
     }
 
+    iniciandoSesion = true
     try {
         const credencial = await signInWithEmailAndPassword(auth, correo, contrasena)
         if (!await esAdministrador(credencial.user)) {
@@ -51,15 +51,21 @@ formulario?.addEventListener('submit', async (evento) => {
             mostrarError('Esta cuenta no tiene permisos de administrador.')
             return
         }
+        notificarAlCargar('Bienvenido al panel de administración.', 'exito')
         window.location.href = 'control.html'
     } catch (error) {
-        mostrarError(mensajeError(error))
+        // Las cuentas de administrador no se crean desde el sitio: sin sugerir "Crear cuenta".
+        mostrarError(error.code === 'auth/invalid-credential'
+            ? 'El correo o la contraseña son incorrectos. Revisa que la contraseña respete mayúsculas y minúsculas.'
+            : mensajeAuth(error))
     } finally {
+        iniciandoSesion = false
         boton.disabled = false
     }
 })
 
 onAuthStateChanged(auth, async (usuario) => {
+    if (iniciandoSesion) return
     if (usuario && await esAdministrador(usuario)) {
         window.location.href = 'control.html'
     }

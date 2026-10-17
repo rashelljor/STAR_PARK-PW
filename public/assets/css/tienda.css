@@ -13,7 +13,7 @@
     --bs-btn-active-color: #4a3c04;
     --bs-btn-active-bg: #fff4ab;
     --bs-btn-active-border-color: #ccb41a;
-    --bs-btn-focus-shadow-rgb: 255, 225, 33;
+    --bs-btn-focus-shadow-rgb: 255, 214, 10;
     border-radius: 8px;
     padding: 10px;
 }
@@ -28,7 +28,23 @@
     --bs-btn-active-color: rgba(22, 25, 169, 0.837);
     --bs-btn-active-bg: #ddf8ff;
     --bs-btn-active-border-color: #70b6ca;
-    --bs-btn-focus-shadow-rgb: 140, 227, 253;
+    --bs-btn-focus-shadow-rgb: 56, 214, 255;
     border-radius: 8px;
     padding: 10px;
+}
+/* Buscador con botón "Limpiar" al lado. */
+.buscadorFila {
+    display: flex;
+    gap: 10px;
+    max-width: 640px;
+    margin: 0 auto;
+}
+
+.buscadorFila input { flex: 1; min-width: 0; }
+.buscadorFila .btn { white-space: nowrap; }
+
+.sinResultados {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 24px;
 }

@@ -1,197 +1,191 @@
-/* Estilos exclusivos del panel de reservas y CRUDs. */
-
-body {
-    font-family: 'Segoe UI', Tahoma, sans-serif;
-}
+/* Estilos exclusivos de Mis Reservas (users/reservas.html).
+   La fuente es la misma del resto del sitio (antes esta página usaba Segoe UI).
+   Se quitaron clases que ya no usaba ninguna página (botonPrimario,
+   filaFormulario, admin-header, etc.). */
 
 main {
-    max-width: none;
+    max-width: var(--ancho);
     padding-top: 30px;
     padding-bottom: 60px;
-    padding-left: 32px;
-    padding-right: 32px;
 }
 
 .panelAdmin {
     background: rgba(18, 24, 33, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--borde);
     border-radius: 18px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
     margin: 18px 0 30px;
-    padding: 28px 22px 18px;
-}
-
-.panelAdmin h2 {
-    color: white;
-    font-size: clamp(28px, 2vw, 42px);
-    font-weight: 800;
-    margin-bottom: 22px;
+    padding: 22px;
 }
 
 .bloqueAdmin {
-    margin-top: 14px;
     overflow-x: auto;
-    border-radius: 18px;
+    border-radius: 14px;
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-table {
+.reservasVacio {
+    text-align: center;
+    padding: 32px 16px;
+}
+
+.reservasVacio p { color: var(--texto); font-size: 18px; margin-bottom: 16px; }
+
+/* --- Tabla (escritorio) --- */
+.tablaReservas {
     border-collapse: collapse;
     width: 100%;
-    min-width: 700px;
 }
 
-table th {
-    background: #8ecff2;
+.tablaReservas th {
+    background: linear-gradient(90deg, var(--celeste), #6fb8ff);
     color: #071522;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 800;
+    letter-spacing: 0.5px;
     padding: 14px 16px;
     text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
 }
 
-table td {
+.tablaReservas td {
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    color: #eef3ff;
+    color: var(--texto);
     font-size: 14px;
     padding: 14px 16px;
+    vertical-align: middle;
 }
 
-table tr:nth-child(even) {
-    background: rgba(255, 255, 255, 0.02);
-}
+.tablaReservas tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.02); }
+.tablaReservas tbody tr:hover { background: rgba(56, 214, 255, 0.06); }
 
-table tr:hover {
-    background: rgba(142, 207, 242, 0.06);
-}
+.celdaNumero { color: var(--gris); font-weight: 700; white-space: nowrap; }
+.celdaDestacada { font-weight: 700; white-space: nowrap; }
+.celdaCorreo { word-break: break-all; }
 
-.botonEliminar,
-.botonEditar,
-.botonPagar,
-.botonEstado,
-.botonPrimario,
-.botonSecundario {
-    border-radius: 8px;
-    cursor: pointer;
+/* Estado de la reserva. */
+.estadoReserva {
+    display: inline-block;
+    border-radius: 999px;
     font-size: 12px;
     font-weight: 700;
-    padding: 7px 12px;
-    transition: all 0.2s ease;
+    padding: 4px 10px;
+    white-space: nowrap;
 }
 
+.estadoPagada { background: rgba(61, 220, 151, 0.15); color: var(--verde); border: 1px solid var(--verde); }
+.estadoPendiente { background: rgba(255, 214, 10, 0.12); color: var(--amarillo); border: 1px solid var(--amarillo); }
+
+.accionesReserva {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.enlaceBoleta { color: var(--celeste); font-weight: 700; text-decoration: none; white-space: nowrap; }
+.enlaceBoleta:hover { text-decoration: underline; }
+
+/* Botones de acción. */
+.botonEliminar,
+.botonEditar,
 .botonPagar {
     background: transparent;
-    border: 1px solid #8ce3fd;
-    color: #8ce3fd;
-    margin-right: 6px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 8px 14px;
 }
 
-.botonEditar,
-.botonEstado {
-    background: transparent;
-    border: 1px solid #8ce3fd;
-    color: #8ce3fd;
-    margin-right: 4px;
+.botonPagar { background: var(--verde); border: 1px solid var(--verde); color: #0b0d14; }
+.botonEditar { border: 1px solid var(--celeste); color: var(--celeste); }
+.botonEliminar { border: 1px solid var(--rojo); color: var(--rojo); }
+
+.botonEditar:hover { background: var(--celeste); color: #0b0d14; }
+.botonEliminar:hover { background: var(--rojo); color: #0b0d14; }
+
+/* Modal de edición (usa la tarjeta de los mensajes centrados). */
+.cajaFormulario {
+    max-width: 480px;
+    text-align: left;
+    max-height: calc(100svh - 32px);
+    overflow-y: auto;
 }
 
-.botonEliminar {
-    background: transparent;
-    border: 1px solid #ff6262;
-    color: #ff6262;
-}
+.cajaFormulario .mensajeTitulo { text-align: center; }
+.cajaFormulario > .etiquetaGris { text-align: center; }
 
-.botonPrimario {
-    background: #f7d645;
-    border: 1px solid #f7d645;
-    color: #0d1b2a;
-    font-weight: 800;
-    min-width: 160px;
-}
+/* --- Tablet y celular (800px o menos): cada reserva es una tarjeta --- */
+@media (max-width: 800px) {
+    main { padding-left: 16px; padding-right: 16px; }
 
-.botonSecundario {
-    background: transparent;
-    border: 1px solid #8ce3fd;
-    color: #8ce3fd;
-    min-width: 120px;
-}
+    .panelAdmin { padding: 12px; background: transparent; border: 0; box-shadow: none; }
+    .bloqueAdmin { overflow: visible; border: 0; }
 
-.botonPrimario:hover,
-.botonSecundario:hover,
-.botonEditar:hover,
-.botonEstado:hover,
-.botonPagar:hover,
-.botonEliminar:hover {
-    transform: translateY(-1px);
-    opacity: 0.95;
-}
-
-.filaFormulario {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(150px, 1fr));
-    gap: 12px;
-    margin-bottom: 18px;
-}
-
-.filaFormulario input,
-.filaFormulario select {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 10px;
-    color: white;
-    min-height: 42px;
-    padding: 10px 12px;
-    width: 100%;
-}
-
-.filaFormulario input::placeholder {
-    color: rgba(255, 255, 255, 0.5);
-}
-
-.inputTexto {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 10px;
-    color: white;
-    min-height: 42px;
-    padding: 10px 12px;
-    width: 100%;
-}
-
-.admin-header {
-    background: rgba(17, 20, 29, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 18px;
-    margin-bottom: 18px;
-    padding: 22px 24px 10px;
-}
-
-.admin-header h1 {
-    margin: 0;
-    font-size: clamp(32px, 3vw, 60px);
-    font-weight: 900;
-    letter-spacing: -0.03em;
-    line-height: 1.08;
-}
-
-.admin-header .etiqueta {
-    margin-top: 10px;
-    font-size: 18px;
-    color: #d9dee7;
-}
-
-@media (max-width: 900px) {
-    .filaFormulario {
-        grid-template-columns: 1fr 1fr;
+    .tablaReservas thead {
+        /* Se oculta visualmente pero sigue disponible para lectores de pantalla. */
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
     }
+
+    .tablaReservas,
+    .tablaReservas tbody,
+    .tablaReservas tr,
+    .tablaReservas td { display: block; width: 100%; }
+
+    .tablaReservas tbody tr {
+        background: var(--superficie);
+        border: 1px solid var(--borde);
+        border-top: 4px solid var(--amarillo);
+        border-radius: 14px;
+        margin-bottom: 16px;
+        padding: 8px 16px 12px;
+    }
+
+    .tablaReservas tbody tr.filaPagada { border-top-color: var(--verde); }
+    .tablaReservas tbody tr:nth-child(even) { background: var(--superficie); }
+
+    /* Cada dato: título a la izquierda, valor a la derecha. */
+    .tablaReservas td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        padding: 10px 0;
+        text-align: right;
+    }
+
+    .tablaReservas td::before {
+        content: attr(data-label);
+        color: var(--gris);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        text-align: left;
+        text-transform: uppercase;
+        flex-shrink: 0;
+    }
+
+    .tablaReservas td:last-child { border-bottom: 0; }
+
+    /* El número de reserva hace de título de la tarjeta. */
+    .tablaReservas td.celdaNumero { font-size: 18px; color: #ffffff; }
+
+    /* Botones a todo el ancho de la tarjeta, fáciles de tocar. */
+    .tablaReservas td.celdaAcciones { display: block; padding-top: 14px; }
+    .tablaReservas td.celdaAcciones::before { display: none; }
+
+    .accionesReserva { display: grid; grid-template-columns: repeat(3, 1fr); }
+    .accionesReserva button { min-height: 44px; }
+
+    .enlaceBoleta { display: block; text-align: center; padding: 10px 0; }
 }
 
 @media (max-width: 640px) {
-    .filaFormulario {
-        grid-template-columns: 1fr;
-    }
-
-    main {
-        padding-left: 16px;
-        padding-right: 16px;
-    }
+    .accionesReserva { grid-template-columns: 1fr 1fr; }
+    .accionesReserva .botonPagar { grid-column: 1 / -1; }
 }

@@ -9,7 +9,8 @@ import { obtenerCarrito, quitarProducto, calcularTotal, limpiarCarrito } from '.
 import { crearReserva } from '../services/bookingService.js'
 import { formatearPrecio } from '../utils/formatters.js'
 import { esperarUsuario, obtenerPerfil } from '../services/authService.js'
-import { notificar } from '../utils/notificaciones.js'
+import { notificar, confirmar, notificarAlCargar } from '../utils/notificaciones.js'
+import { rangoFechasReserva, erroresDatosReserva } from '../utils/validators.js'
 
 export default {
 
@@ -25,7 +26,9 @@ export default {
                 fecha: ''
             },
             perfil: null,
-            fechaMinima: ''
+            fechaMinima: '',
+            fechaMaxima: '',
+            enviando: false
         }
     },
 
@@ -38,18 +41,26 @@ export default {
     async mounted() {
         const usuario = await esperarUsuario()
         if (!usuario) {
-            await notificar('Inicia sesión para ver tu carrito.', 'advertencia')
+            notificarAlCargar('Inicia sesión para ver tu carrito.', 'advertencia')
             window.location.href = 'login.html'
             return
         }
 
-        this.carrito = await obtenerCarrito()
-        // Impide seleccionar una fecha anterior al día actual.
-        this.fechaMinima = new Date().toISOString().slice(0, 10)
+        // Solo se puede reservar desde hoy hasta un año después.
+        const { minima, maxima } = rangoFechasReserva()
+        this.fechaMinima = minima
+        this.fechaMaxima = maxima
+
+        try {
+            this.carrito = await obtenerCarrito()
+        } catch (error) {
+            console.error(error)
+            notificar('No se pudo cargar tu carrito. Recarga la página para intentarlo de nuevo.', 'error')
+        }
 
         // Precarga nombre, correo y teléfono desde el perfil del cliente.
-        // La fecha de visita la sigue escribiendo el cliente a mano.
-        this.perfil = await obtenerPerfil(usuario.uid)
+        // Si el perfil no carga, el cliente simplemente los escribe a mano.
+        this.perfil = await obtenerPerfil(usuario.uid).catch(() => null)
         this.formulario.nombre = this.perfil?.nombreCompleto || ''
         this.formulario.correo = this.perfil?.correo || usuario.email || ''
         this.formulario.telefono = this.perfil?.telefono || ''
@@ -59,15 +70,34 @@ export default {
         formatearPrecio,
 
         async eliminar(indice) {
-            this.carrito = await quitarProducto(indice)
+            const item = this.carrito[indice]
+            if (!await confirmar('¿Quitar ' + item.nombre + ' de tu carrito?', { textoConfirmar: 'Quitar', tipo: 'error' })) return
+
+            try {
+                this.carrito = await quitarProducto(indice)
+                notificar(item.nombre + ' se quitó de tu carrito.', 'exito')
+            } catch (error) {
+                console.error(error)
+                notificar('No se pudo quitar el producto. Intenta nuevamente.', 'error')
+            }
         },
 
         async confirmarReserva() {
+            if (this.enviando) return
+
             if (this.carrito.length === 0) {
                 notificar('Tu carrito está vacío. Agrega productos desde la tienda.', 'advertencia')
                 return
             }
 
+            const errores = erroresDatosReserva(this.formulario)
+            if (errores.length) {
+                notificar(errores, 'error')
+                return
+            }
+
+            // Evita que un doble clic registre la misma reserva dos veces.
+            this.enviando = true
             try {
                 await crearReserva({
                     nombre: this.formulario.nombre,
@@ -86,6 +116,8 @@ export default {
             } catch (error) {
                 console.error(error)
                 notificar('No se pudo registrar la reserva. Intenta nuevamente.', 'error')
+            } finally {
+                this.enviando = false
             }
         }
     },
@@ -119,7 +151,7 @@ export default {
 
                     <div class="glass bloqueFormulario">
                         <h3>Datos para la reserva</h3>
-                        <form id="formularioCarrito" @submit.prevent="confirmarReserva">
+                        <form id="formularioCarrito" novalidate @submit.prevent="confirmarReserva">
                             <div class="campo">
                                 <label class="form-label" for="nombre">Nombre completo</label>
                                 <input v-model="formulario.nombre" class="form-control" type="text" id="nombre" placeholder="Nombres" required>
@@ -134,9 +166,9 @@ export default {
                             </div>
                             <div class="campo">
                                 <label class="form-label" for="fecha">Fecha de visita</label>
-                                <input v-model="formulario.fecha" :min="fechaMinima" class="form-control" type="date" id="fecha" required>
+                                <input v-model="formulario.fecha" :min="fechaMinima" :max="fechaMaxima" class="form-control" type="date" id="fecha" required>
                             </div>
-                            <button type="submit" class="btn botonAmarillo">Confirmar reserva</button>
+                            <button type="submit" class="btn botonAmarillo" :disabled="enviando">{{ enviando ? 'Registrando...' : 'Confirmar reserva' }}</button>
                         </form>
                     </div>
                 </div>

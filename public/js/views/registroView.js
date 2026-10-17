@@ -1,12 +1,14 @@
 import Header from '../components/Header.js'
 import Footer from '../components/Footer.js'
 import { registrarUsuario } from '../services/authService.js'
-import { notificar } from '../utils/notificaciones.js'
+import { notificar, confirmar, notificarAlCargar } from '../utils/notificaciones.js'
 import {
     esCorreoValido,
-    esContrasenaValida,
+    requisitosFaltantesContrasena,
+    REQUISITOS_CONTRASENA,
     esNombreUsuarioValido,
-    esTelefonoValido
+    esTelefonoValido,
+    esDocumentoValido
 } from '../utils/validators.js'
 
 export default {
@@ -24,13 +26,34 @@ export default {
             telefono: '',
             region: '',
             preferenciasCorreo: false,
-            errores: {}
+            errores: {},
+            intentoEnvio: false
+        }
+    },
+
+    computed: {
+        // Se recalcula mientras el usuario escribe, para guiarlo antes de enviar.
+        faltantesContrasena() {
+            return requisitosFaltantesContrasena(this.contrasena)
+        },
+
+        // Estado de cada requisito para la lista en vivo bajo el campo.
+        requisitos() {
+            return REQUISITOS_CONTRASENA.map(requisito => ({ texto: requisito.texto, cumple: requisito.cumple(this.contrasena) }))
+        }
+    },
+
+    watch: {
+        // Al corregir la contraseña, el error rojo se quita y queda solo la guía en vivo.
+        contrasena() {
+            delete this.errores.contrasena
         }
     },
 
     methods: {
         async enviar() {
             this.errores = {}
+            this.intentoEnvio = true
             let tieneError = false
 
             if (!esCorreoValido(this.correo)) {
@@ -38,8 +61,8 @@ export default {
                 tieneError = true
             }
 
-            if (!esContrasenaValida(this.contrasena)) {
-                this.errores.contrasena = 'La contraseña debe tener al menos 8 caracteres, incluyendo un número, una mayúscula y una minúscula.'
+            if (this.faltantesContrasena.length) {
+                this.errores.contrasena = 'A tu contraseña le falta: ' + this.faltantesContrasena.join(', ') + '.'
                 tieneError = true
             }
 
@@ -60,6 +83,11 @@ export default {
 
             if (!this.numeroDocumento.trim()) {
                 this.errores.numeroDocumento = 'Ingresa tu número de documento.'
+                tieneError = true
+            } else if (this.tipoDocumento && !esDocumentoValido(this.tipoDocumento, this.numeroDocumento)) {
+                this.errores.numeroDocumento = this.tipoDocumento === 'DNI'
+                    ? 'El DNI debe tener exactamente 8 dígitos.'
+                    : 'El ' + this.tipoDocumento.toLowerCase() + ' debe tener entre 6 y 12 letras o números.'
                 tieneError = true
             }
 
@@ -91,13 +119,27 @@ export default {
             })
 
             if (!resultado.ok) {
-                if (resultado.campo && resultado.campo !== 'general') this.errores[resultado.campo] = resultado.mensaje
+                if (resultado.campo !== 'general') this.errores[resultado.campo] = resultado.mensaje
+
+                // Correo ya registrado: lo más probable es que el cliente ya tenga
+                // cuenta, así que se le ofrece ir directo a iniciar sesión.
+                if (resultado.codigo === 'auth/email-already-in-use') {
+                    const irALogin = await confirmar(
+                        'Ya existe una cuenta con ' + this.correo.trim() + '. ¿Quieres iniciar sesión con ese correo?',
+                        { textoConfirmar: 'Iniciar sesión', textoCancelar: 'Usar otro correo' }
+                    )
+                    if (irALogin) window.location.href = 'login.html'
+                    return
+                }
+
                 notificar(resultado.mensaje, 'error')
                 return
             }
 
-            await notificar('¡Cuenta creada! Ya puedes iniciar sesión.', 'exito')
-            window.location.href = 'login.html'
+            // La cuenta queda con la sesión iniciada: el cliente entra directo al sitio.
+            const nombre = this.nombreCompleto.trim().split(' ')[0]
+            notificarAlCargar('¡Cuenta creada con éxito! Bienvenido a Star Park, ' + nombre + '.', 'exito')
+            window.location.href = 'index.html'
         }
     },
 
@@ -123,8 +165,14 @@ export default {
                             <div class="campo">
                                 <label class="form-label amarillo" for="contrasena">Contraseña</label>
                                 <input v-model="contrasena" type="password" id="contrasena" name="contrasena" autocomplete="new-password" placeholder="123ABCdef" required>
-                                <p>Debe tener al menos 8 caracteres, incluyendo un número, una mayúscula y una minúscula.</p>
-                                <p class="mensajeError" role="alert">{{ errores.contrasena }}</p>
+                                <!-- Lista en vivo: gris antes de escribir, rojo lo que falta y verde lo que ya cumple. -->
+                                <ul class="requisitosContrasena" :class="{ activa: contrasena || intentoEnvio }" aria-live="polite">
+                                    <li v-for="requisito in requisitos" :key="requisito.texto" :class="requisito.cumple ? 'cumple' : 'falta'">
+                                        <span aria-hidden="true">{{ requisito.cumple ? '✓' : '✕' }}</span>
+                                        {{ requisito.texto }}
+                                        <span class="visually-hidden">{{ requisito.cumple ? '(cumplido)' : '(pendiente)' }}</span>
+                                    </li>
+                                </ul>
                             </div>
 
                             <div class="campo">

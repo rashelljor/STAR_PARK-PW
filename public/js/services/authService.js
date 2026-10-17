@@ -13,12 +13,28 @@ import {
 
 function mensajeAuth(error) {
     const mensajes = {
-        'auth/invalid-credential': 'El correo o la contraseña son incorrectos.',
+        // Firebase (con la protección contra enumeración de correos activa) no
+        // distingue si falló el correo o la contraseña, a propósito: así nadie
+        // puede averiguar qué correos tienen cuenta. Por eso es un solo mensaje.
+        'auth/invalid-credential': 'El correo o la contraseña son incorrectos. Revisa que el correo esté bien escrito y que la contraseña respete mayúsculas. Si aún no tienes cuenta, créala en "Crear cuenta".',
+        'auth/wrong-password': 'La contraseña es incorrecta. Recuerda que distingue mayúsculas y minúsculas.',
+        'auth/user-not-found': 'No existe una cuenta con ese correo. Puedes crearla en "Crear cuenta".',
         'auth/email-already-in-use': 'Ya existe una cuenta con este correo electrónico.',
         'auth/invalid-email': 'Ingresa un correo electrónico válido.',
-        'auth/weak-password': 'La contraseña no cumple los requisitos mínimos.'
+        'auth/weak-password': 'La contraseña no cumple los requisitos mínimos.',
+        'auth/too-many-requests': 'Demasiados intentos fallidos. Espera unos minutos antes de volver a intentarlo.',
+        'auth/user-disabled': 'Esta cuenta está deshabilitada. Comunícate con Star Park.',
+        'auth/network-request-failed': 'No hay conexión a internet. Revisa tu red e inténtalo de nuevo.'
     }
     return mensajes[error.code] || 'No se pudo completar la operación. Intenta nuevamente.'
+}
+
+// Campo del formulario de registro al que corresponde cada error de Firebase,
+// para marcarlo en rojo además de mostrar el mensaje.
+const CAMPO_ERROR_AUTH = {
+    'auth/email-already-in-use': 'correo',
+    'auth/invalid-email': 'correo',
+    'auth/weak-password': 'contrasena'
 }
 
 // El login solo acepta correo (no nombre de usuario): resolver un nombre de
@@ -50,10 +66,11 @@ export async function registrarUsuario(datos) {
             rol: 'cliente',
             creadoEn: new Date()
         })
-        await signOut(auth)
+        // Firebase ya deja la sesión iniciada al crear la cuenta; se mantiene
+        // para que el cliente no tenga que volver a escribir sus datos.
         return { ok: true }
     } catch (error) {
-        return { ok: false, campo: 'general', mensaje: mensajeAuth(error) }
+        return { ok: false, codigo: error.code, campo: CAMPO_ERROR_AUTH[error.code] || 'general', mensaje: mensajeAuth(error) }
     }
 }
 

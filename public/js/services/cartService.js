@@ -3,6 +3,14 @@
 
 import { leerCarrito, guardarCarrito, vaciarCarrito } from '../repository/cartRepository.js'
 
+// Avisa al resto de la página (el contador del Header) cuántos productos hay.
+// "agregado" indica que el cambio fue una suma, para animar el contador.
+export const EVENTO_CARRITO = 'starpark:carrito'
+
+function avisarCambio(cantidad, agregado = false) {
+    window.dispatchEvent(new CustomEvent(EVENTO_CARRITO, { detail: { cantidad, agregado } }))
+}
+
 export async function obtenerCarrito() {
     return leerCarrito()
 }
@@ -17,19 +25,24 @@ export async function agregarProducto(producto) {
         precio: producto.precio
     })
 
-    return guardarCarrito(carrito)
+    const guardado = await guardarCarrito(carrito)
+    avisarCambio(guardado.length, true)
+    return guardado
 }
 
 export async function quitarProducto(indice) {
     const carrito = await leerCarrito()
     carrito.splice(indice, 1)
-    return guardarCarrito(carrito)
+    const guardado = await guardarCarrito(carrito)
+    avisarCambio(guardado.length)
+    return guardado
 }
 
 export function calcularTotal(carrito) {
     return carrito.reduce((total, item) => total + Number(item.precio || 0), 0)
 }
 
-export function limpiarCarrito() {
-    vaciarCarrito()
+export async function limpiarCarrito() {
+    await vaciarCarrito()
+    avisarCambio(0)
 }

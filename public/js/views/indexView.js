@@ -6,6 +6,7 @@ import Footer from '../components/Footer.js'
 import { db } from '../config/firebaseConfig.js'
 import { collection, doc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
 import { CONTENIDO_INICIAL } from '../utils/contenidoInicial.js'
+import { irAlHash } from '../utils/navegacion.js'
 
 const IMAGEN_POR_DEFECTO = '../../assets/img/logostar.png'
 
@@ -26,16 +27,33 @@ export default {
     // El contenido se edita desde el panel admin (Contenido institucional) y se
     // escucha en tiempo real: cualquier cambio se ve sin recargar la página.
     mounted() {
-        const alFallar = error => { console.error(error); this.cargado = true }
         const ordenar = docs => docs.map(d => ({ id: d.id, ...d.data() })).sort((x, y) => (x.orden || 0) - (y.orden || 0))
+
+        // Cuando llegan atracciones y servicios por primera vez (o fallan), la
+        // página ya tiene su altura final y se puede ir a la sección del "#".
+        const pendientes = new Set(['atracciones', 'servicios'])
+        const listo = async nombre => {
+            if (!pendientes.delete(nombre) || pendientes.size) return
+            this.cargado = true
+            await this.$nextTick()
+            irAlHash()
+        }
+        const alFallar = nombre => error => { console.error(error); listo(nombre) }
 
         this.cancelar = [
             onSnapshot(doc(db, 'contenido', 'institucional'), snap => {
                 this.contenido = { ...CONTENIDO_INICIAL, ...(snap.exists() ? snap.data() : {}) }
-            }, alFallar),
-            onSnapshot(collection(db, 'atracciones'), snap => { this.atracciones = ordenar(snap.docs); this.cargado = true }, alFallar),
-            onSnapshot(collection(db, 'servicios'), snap => { this.servicios = ordenar(snap.docs) }, alFallar)
+            }, error => console.error(error)),
+            onSnapshot(collection(db, 'atracciones'), snap => { this.atracciones = ordenar(snap.docs); listo('atracciones') }, alFallar('atracciones')),
+            onSnapshot(collection(db, 'servicios'), snap => { this.servicios = ordenar(snap.docs); listo('servicios') }, alFallar('servicios'))
         ]
+    },
+
+    computed: {
+        // Abre Google Maps con la dirección que el admin configuró en Contenido institucional.
+        enlaceMapa() {
+            return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(this.contenido.ubicacion)
+        }
     },
 
     unmounted() {
@@ -71,6 +89,25 @@ export default {
                             ¡Regístrate como un nuevo astronauta y recibe tu primera misión!
                         </p>
                         <a class="btn btn-primary rounded-pill botonAmarillo" href="login.html">¡Iniciar Misión!</a>
+
+                        <!-- Franja con lo que más buscan los visitantes: horario, dirección y cómo llegar. -->
+                        <div class="franjaVisita glass">
+                            <div class="franjaDato">
+                                <span class="franjaIcono" aria-hidden="true">🕒</span>
+                                <div>
+                                    <p class="franjaTitulo">Horario</p>
+                                    <p class="franjaTexto">{{ contenido.horarios }}</p>
+                                </div>
+                            </div>
+                            <div class="franjaDato">
+                                <span class="franjaIcono" aria-hidden="true">📍</span>
+                                <div>
+                                    <p class="franjaTitulo">Dirección</p>
+                                    <p class="franjaTexto">{{ contenido.ubicacion }}</p>
+                                </div>
+                            </div>
+                            <a class="btn botonCelesteBorde" :href="enlaceMapa" target="_blank" rel="noopener">🧭 Cómo llegar</a>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -152,9 +189,9 @@ export default {
                             </div>
                         </div>
 
-                        <div class="tarjetaMapa glass">
-                            <img src="../../assets/img/mapa_huancayo.png" alt="Mapa Ubicación Star Park, Huancayo" class="mapaImagen">
-                        </div>
+                        <a class="tarjetaMapa glass" :href="enlaceMapa" target="_blank" rel="noopener" title="Abrir en Google Maps">
+                            <img src="../../assets/img/mapa_huancayo.png" alt="Mapa Ubicación Star Park, Huancayo. Abrir en Google Maps" class="mapaImagen">
+                        </a>
                     </div>
                 </section>
             </main>

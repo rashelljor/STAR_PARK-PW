@@ -14,6 +14,13 @@ export default {
         cardClass: {
             type: String,
             default: ''
+        },
+        // Da a cada tarjeta el id "producto-<id>" para enlazarla desde el panel
+        // admin ("Ver en tienda"). Solo en las grillas principales, no en los
+        // resultados de búsqueda, para no repetir ids en la página.
+        conAnclas: {
+            type: Boolean,
+            default: false
         }
     },
 
@@ -35,6 +42,7 @@ export default {
             <div
                 v-for="producto in products"
                 :key="producto.id"
+                :id="conAnclas ? 'producto-' + producto.id : null"
                 :class="[claseTarjeta(producto), 'glass']"
             >
                 <div class="tarjetaImgCaja">

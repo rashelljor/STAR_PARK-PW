@@ -2,6 +2,9 @@
 // Lee <body data-page="..."> para saber qué vista montar dentro de <div id="app">.
 
 import { createApp } from 'https://cdn.jsdelivr.net/npm/vue@3/dist/vue.esm-browser.js'
+// Se importa en todas las páginas para mostrar los mensajes que deja la página anterior
+// (bienvenida, cierre de sesión...) y el aviso de conexión perdida.
+import './utils/notificaciones.js'
 
 const vistas = {
     inicio: () => import('./views/indexView.js'),

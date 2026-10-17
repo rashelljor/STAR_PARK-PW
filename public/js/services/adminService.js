@@ -19,10 +19,11 @@ export async function listar(coleccion, ordenar = 'nombre') {
         .sort((a, b) => String(a[ordenar] || a.nombreCompleto || a.correo || '').localeCompare(String(b[ordenar] || b.nombreCompleto || b.correo || '')))
 }
 
-export function escuchar(coleccion, callback, ordenar = 'nombre') {
+// alFallar se llama si la escucha en tiempo real se corta (permisos, red...).
+export function escuchar(coleccion, callback, alFallar = console.error) {
     return onSnapshot(collection(db, coleccion), snapshot => {
         callback(snapshot.docs.map(documento => ({ id: documento.id, ...documento.data() })))
-    })
+    }, alFallar)
 }
 
 export function crear(coleccion, datos) {

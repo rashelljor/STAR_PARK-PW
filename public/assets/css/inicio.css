@@ -1,5 +1,5 @@
 /* Sección Portada (Hero) - Solo vive en Inicio */
-.hero { background: #0b0d14; isolation: isolate; position: relative; min-height: 520px; display: flex; align-items: center; height: calc(100svh - 54px); overflow: hidden;}
+.hero { background: #0b0d14; isolation: isolate; position: relative; min-height: max(520px, calc(100svh - 72px)); display: flex; align-items: center; overflow: hidden;}
 .hero::before {
   background: linear-gradient(90deg, #0b0d14 0%, rgba(11, 13, 20, 0.85) 45%, transparent 100%);
 }
@@ -38,4 +38,56 @@
   object-fit: cover;
   filter: grayscale(20%) contrast(110%);
   transition: filter 0.3s ease;
+}
+
+/* Mapa de la sección Ubicación: también abre Google Maps. */
+.tarjetaMapa { display: block; overflow: hidden; }
+.tarjetaMapa:hover .mapaImagen { filter: none; }
+
+/* Franja del hero con horario, dirección y "Cómo llegar". */
+.franjaVisita {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 28px;
+  margin-top: 28px;
+  padding: 16px 20px;
+  background: rgba(11, 13, 20, 0.78);
+  backdrop-filter: blur(8px);
+  border-left: 4px solid var(--amarillo);
+}
+
+.franjaDato {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.franjaIcono { font-size: 22px; line-height: 1.2; }
+
+.franjaTitulo {
+  color: var(--amarillo);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.franjaTexto {
+  color: var(--texto);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* En la portada ancha la franja usa todo el ancho disponible del texto. */
+@media (min-width: 801px) {
+  .heroContenido { max-width: 720px; }
+}
+
+@media (max-width: 640px) {
+  .franjaVisita { padding: 14px 16px; }
+  .franjaVisita .btn { width: 100%; }
 }

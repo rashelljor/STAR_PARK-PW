@@ -1,0 +1,228 @@
+/* Estilos exclusivos de Mis Compras (users/miscompras.html).
+   La boleta usa dos acentos fijos para que los colores no se mezclen:
+   celeste para la identificación del comprobante y amarillo para el total.
+   Los textos van en blanco/gris y los montos con números tabulares
+   (todas las cifras del mismo ancho, alineadas a la derecha). */
+
+#listaCompras {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.boletaVacia {
+  text-align: center;
+  padding: 32px 16px;
+}
+
+.boletaVacia p { color: var(--texto); font-size: 18px; margin-bottom: 16px; }
+
+.boleta {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-top: 5px solid var(--celeste);
+  border-radius: var(--redondeo);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  padding: 32px;
+}
+
+.boleta p { margin: 0; }
+
+/* --- Cabecera --- */
+.boletaCabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--borde);
+}
+
+.boletaEmisor {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.boletaLogo { width: 64px; height: auto; flex-shrink: 0; }
+.boletaLogo:hover { transform: none; }
+
+.boletaEmpresa {
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.boletaDato { color: var(--gris); font-size: 13px; }
+
+.boletaRecuadro {
+  flex-shrink: 0;
+  min-width: 240px;
+  border: 2px solid var(--celeste);
+  border-radius: 10px;
+  padding: 12px 18px;
+  text-align: center;
+}
+
+.boletaRecuadro p { color: var(--texto); font-size: 13px; font-weight: 600; }
+.boletaRecuadro .boletaTipo { color: var(--celeste); font-size: 14px; font-weight: 800; margin: 4px 0; }
+
+.boletaSerie {
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  letter-spacing: 1px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Datos del cliente --- */
+.boletaInfo {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px 24px;
+  margin: 24px 0;
+}
+
+.boletaInfo dt {
+  color: var(--gris);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.boletaInfo dd {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* --- Detalle --- */
+.boletaDetalle {
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.boletaFila {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 70px 110px 110px;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 16px;
+  border-top: 1px solid var(--borde);
+  color: var(--texto);
+  font-size: 14px;
+}
+
+.boletaFila:nth-child(odd):not(.boletaFilaTitulo) { background: rgba(255, 255, 255, 0.02); }
+
+.boletaFilaTitulo {
+  border-top: 0;
+  background: var(--tarjeta);
+  color: var(--gris);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.boletaFila .numero { text-align: right; font-variant-numeric: tabular-nums; }
+.boletaDescripcion { font-weight: 600; color: #ffffff; }
+.boletaImporte { font-weight: 700; }
+
+/* --- Total y pie --- */
+.boletaTotal {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-top: 20px;
+  padding: 16px 20px;
+  background: rgba(255, 214, 10, 0.08);
+  border: 1px solid rgba(255, 214, 10, 0.4);
+  border-radius: 10px;
+}
+
+.boletaTotal span {
+  color: var(--texto);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.boletaTotal strong {
+  color: var(--amarillo);
+  font-size: 26px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.boletaPie {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.boletaPie p { color: var(--gris); font-size: 13px; }
+
+.boletaEstado {
+  background: rgba(61, 220, 151, 0.15);
+  border: 1px solid var(--verde);
+  border-radius: 999px;
+  color: var(--verde);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 12px;
+}
+
+/* --- 800px: el recuadro baja debajo del emisor y los datos van en 2 columnas --- */
+@media (max-width: 800px) {
+  .boleta { padding: 24px; }
+  .boletaCabecera { flex-direction: column; }
+  .boletaRecuadro { width: 100%; min-width: 0; }
+  .boletaInfo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .boletaFila { grid-template-columns: minmax(0, 1fr) 56px 96px 96px; }
+}
+
+/* --- 640px: cada producto en dos líneas (nombre arriba; cantidad × precio e importe abajo) --- */
+@media (max-width: 640px) {
+  #listaCompras { gap: 24px; }
+  .boleta { padding: 18px 16px; }
+  .boletaLogo { width: 48px; }
+  .boletaEmpresa { font-size: 16px; }
+  .boletaInfo { gap: 14px 16px; }
+
+  .boletaFilaTitulo { display: none; }
+
+  .boletaFila {
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas:
+      "descripcion descripcion descripcion"
+      "cantidad unitario importe";
+    gap: 4px 6px;
+    padding: 12px 14px;
+  }
+
+  .boletaFila:nth-child(2) { border-top: 0; }
+
+  .boletaDescripcion { grid-area: descripcion; }
+  .boletaCantidad { grid-area: cantidad; color: var(--gris); }
+  .boletaCantidad::after { content: ' ×'; }
+  .boletaUnitario { grid-area: unitario; text-align: left !important; color: var(--gris); }
+  .boletaImporte { grid-area: importe; }
+
+  .boletaTotal { padding: 14px 16px; }
+  .boletaTotal strong { font-size: 22px; }
+  .boletaPie { flex-direction: column; text-align: center; }
+}

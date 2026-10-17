@@ -6,6 +6,33 @@
 
 .botonAmarillo:hover { background: var(--celeste); color: var(--azul); }
 
+/* Movimiento sutil en todos los botones del sitio: crecen un poco al pasar
+   el mouse y se "hunden" al presionarlos. En pantallas táctiles solo se ve
+   el efecto al presionar, porque ahí no existe el hover. */
+.btn,
+button {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+@media (hover: hover) {
+  .btn:not(:disabled):hover,
+  button:not(:disabled):hover {
+    transform: translateY(-1px) scale(1.04);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.btn:not(:disabled):active,
+button:not(:disabled):active {
+  transform: scale(0.96);
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn, button { transition: none; }
+  .btn:hover, button:hover, .btn:active, button:active { transform: none !important; }
+}
+
 /* Etiquetas y Badges */
 .etiqueta { border: 1px solid var(--celeste); color: var(--celeste); font-size: 16px; font-weight: 300; padding: 4px 12px; border-radius: 999px; display: inline-block; }
 
@@ -13,8 +40,10 @@
 
 /* Encabezados de sección reutilizables */
 .seccionCabecera {
-  background: linear-gradient(135deg, rgba(40, 42, 50, 0.6) 0%, rgba(25, 27, 35, 0.9) 100%);
-  border-top: 5px solid var(--celeste);
+  background:
+    linear-gradient(90deg, var(--celeste), var(--violeta), var(--amarillo)) top / 100% 5px no-repeat,
+    radial-gradient(ellipse at top, rgba(56, 214, 255, 0.14), transparent 70%),
+    linear-gradient(135deg, rgba(40, 42, 50, 0.6) 0%, rgba(25, 27, 35, 0.9) 100%);
   padding: 24px 28px;
   margin-bottom: 32px;
   border-radius: var(--redondeo);
@@ -57,14 +86,146 @@
   color: #0b0d14;
 }
 
-/* Menú de Navegación */
-.navbar .nav-item.dropdown { position: relative; }
+/* Menú de Navegación (Header.js) */
+/* Antes el submenú se ocultaba con display:none y solo se abría con :hover.
+   En celular no existe el hover y esa regla también tapaba la clase .show
+   de Bootstrap, así que los enlaces a secciones (#) no se podían tocar.
+   Ahora el hover solo aplica en escritorio con mouse; en celular el menú
+   hamburguesa muestra las secciones siempre visibles, sin pasos extra. */
+.barraSitio {
+  background: rgba(11, 13, 20, 0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--borde);
+  box-shadow: 0 2px 0 0 rgba(56, 214, 255, 0.35);
+}
 
-.navbar .dropdown-menu { position: absolute; top: 100%; left: 0; display: none; }
+.barraSitio .navbar-brand img { height: 44px; width: auto; }
 
-.navbar .nav-item.dropdown:hover .dropdown-menu { display: block; }
+.barraSitio .nav-link {
+  color: var(--texto);
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.barraSitio .nav-link:hover,
+.barraSitio .nav-link:focus-visible { color: var(--celeste); }
+
+/* Página o sección actual. */
+.barraSitio .nav-link.active,
+.barraSitio .dropdown-item.active {
+  color: var(--amarillo);
+  background: rgba(255, 214, 10, 0.1);
+}
+
+.barraSitio .dropdown-menu {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+}
+
+.barraSitio .dropdown-item { color: var(--texto); }
+.barraSitio .dropdown-item:hover { background: rgba(56, 214, 255, 0.12); color: var(--celeste); }
+
+.barraSitio .navbar-toggler {
+  border: 1px solid var(--celeste);
+  padding: 8px 10px;
+}
+
+.barraSitio .navbar-toggler:focus { box-shadow: 0 0 0 3px rgba(56, 214, 255, 0.4); }
+
+.saludoUsuario { color: var(--texto); font-weight: 600; }
+
+/* Escritorio: el submenú se abre al pasar el mouse. */
+@media (hover: hover) and (min-width: 992px) {
+  .barraSitio .dropdown:hover > .dropdown-menu { display: block; margin-top: 0; }
+}
+
+/* Tablet y celular (menú hamburguesa): botones grandes y secciones visibles. */
+@media (max-width: 991.98px) {
+  .barraSitio .navbar-collapse {
+    max-height: calc(100svh - 72px);
+    overflow-y: auto;
+    padding: 12px 0 16px;
+  }
+
+  .barraSitio .nav-link,
+  .barraSitio .dropdown-item {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    font-size: 16px;
+  }
+
+  .barraSitio .dropdown-toggle { display: none; }
+
+  .barraSitio .dropdown-menu {
+    display: block;
+    position: static;
+    background: transparent;
+    border: 0;
+    border-left: 2px solid var(--borde);
+    border-radius: 0;
+    margin: 0 0 4px 12px;
+    padding: 0;
+  }
+
+  .barraSitio .dropdown-item { color: var(--gris); padding-left: 16px; }
+
+  .barraSitio .accionesUsuario {
+    border-top: 1px solid var(--borde);
+    padding-top: 16px;
+    margin-top: 8px;
+  }
+
+  .barraSitio .accionesUsuario .btn { min-height: 48px; justify-content: center; }
+}
+
+/* Las secciones a las que llevan los enlaces "#" no quedan tapadas por la barra fija. */
+[id] { scroll-margin-top: 84px; }
 
 .icono-boton { width: 18px; height: 18px; object-fit: contain;}
+
+/* Contador de productos sobre el botón del carrito. */
+.botonCarrito { position: relative; }
+
+.contadorCarrito {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--rojo);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 22px;
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--fondo);
+}
+
+/* Rebote breve cada vez que se agrega un producto. */
+.contadorCarrito.rebote { animation: reboteCarrito 0.5s ease; }
+
+@keyframes reboteCarrito {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.5); }
+  60% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+/* Tarjeta resaltada al llegar desde "Ver en tienda" del panel admin. */
+.resaltado { animation: resaltarTarjeta 1.2s ease 2; }
+
+@keyframes resaltarTarjeta {
+  50% { box-shadow: 0 0 0 4px var(--amarillo), 0 0 30px rgba(255, 214, 10, 0.5); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contadorCarrito.rebote, .resaltado { animation: none; }
+  .resaltado { box-shadow: 0 0 0 4px var(--amarillo); }
+}
 
 /* Tarjeta de Atracción */
 .tarjetaAtraccion {
@@ -78,7 +239,7 @@
 
 .tarjetaAtraccion:hover {
   transform: translateY(-8px);
-  box-shadow: 0 12px 25px rgba(140, 227, 253, 0.15);
+  box-shadow: 0 12px 25px rgba(56, 214, 255, 0.2);
   border-color: var(--celeste);
 }
 
@@ -264,8 +425,8 @@
   animation: mensajeEntrar 0.22s ease-out;
 }
 
-.mensaje-exito { --acento: #3ddc97; }
-.mensaje-error { --acento: #ff5c7a; }
+.mensaje-exito { --acento: var(--verde); }
+.mensaje-error { --acento: var(--rojo); }
 .mensaje-advertencia { --acento: var(--amarillo); }
 .mensaje-info { --acento: var(--celeste); }
 
@@ -350,7 +511,7 @@
 
 /* Texto de error bajo cada campo de formulario, con el mismo rojo de los mensajes. */
 .mensajeError {
-  color: #ff5c7a;
+  color: var(--rojo);
   font-size: 13px;
   margin: 0;
 }
@@ -364,4 +525,66 @@
 
 @media (prefers-reduced-motion: reduce) {
   .mensajeFondo, .mensajeCaja, .mensajeSaliendo { animation: none; }
+}
+
+/* Botón secundario de acento celeste (complementa a .botonAmarillo). */
+.botonCelesteBorde {
+  border: 2px solid var(--celeste);
+  border-radius: 999px;
+  color: var(--celeste);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 8px 20px;
+  background: transparent;
+}
+
+.botonCelesteBorde:hover,
+.botonCelesteBorde:focus-visible {
+  background: var(--celeste);
+  color: #0b0d14;
+}
+
+/* Lista de requisitos de la contraseña (registro). Gris antes de escribir;
+   luego cada línea pasa a rojo (falta) o verde (cumple). */
+.requisitosContrasena {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 16px;
+  margin: 4px 0 0;
+  padding: 12px 14px;
+  background: var(--tarjeta);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+}
+
+.requisitosContrasena li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gris);
+  transition: color 0.2s ease;
+}
+
+.requisitosContrasena li span[aria-hidden] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 12px;
+  background: var(--borde);
+  color: var(--texto);
+}
+
+.requisitosContrasena.activa li.falta { color: var(--rojo); }
+.requisitosContrasena.activa li.falta span[aria-hidden] { background: var(--rojo); color: #11131b; }
+.requisitosContrasena li.cumple { color: var(--verde); }
+.requisitosContrasena li.cumple span[aria-hidden] { background: var(--verde); color: #11131b; }
+
+@media (max-width: 640px) {
+  .requisitosContrasena { grid-template-columns: 1fr; }
 }

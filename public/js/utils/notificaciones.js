@@ -102,14 +102,55 @@ export function notificar(mensaje, tipo = 'info') {
 }
 
 // Pide confirmación. Devuelve true si el usuario acepta y false si cancela.
-export function confirmar(mensaje, { textoConfirmar = 'Aceptar', tipo = 'advertencia' } = {}) {
+export function confirmar(mensaje, { textoConfirmar = 'Aceptar', textoCancelar = 'Cancelar', tipo = 'advertencia' } = {}) {
     return abrir({
         mensaje,
         tipo,
         autoCerrar: false,
         botones: [
-            { texto: 'Cancelar', valor: false, clase: 'mensajeBoton mensajeBotonSecundario' },
+            { texto: textoCancelar, valor: false, clase: 'mensajeBoton mensajeBotonSecundario' },
             { texto: textoConfirmar, valor: true, clase: 'mensajeBoton' }
         ]
     })
 }
+
+// Guarda un mensaje para mostrarlo al cargar la siguiente página. Se usa justo
+// antes de redirigir (login, cierre de sesión...) para no retrasar la navegación.
+const CLAVE_PENDIENTE = 'starpark:mensajePendiente'
+
+export function notificarAlCargar(mensaje, tipo = 'info') {
+    try {
+        sessionStorage.setItem(CLAVE_PENDIENTE, JSON.stringify({ mensaje, tipo }))
+    } catch {
+        // Sin almacenamiento disponible (modo privado estricto): el mensaje simplemente no se muestra.
+    }
+}
+
+function mostrarPendiente() {
+    try {
+        const guardado = sessionStorage.getItem(CLAVE_PENDIENTE)
+        if (!guardado) return
+        sessionStorage.removeItem(CLAVE_PENDIENTE)
+        const { mensaje, tipo } = JSON.parse(guardado)
+        notificar(mensaje, tipo)
+    } catch {
+        // Ignorado a propósito: un mensaje pendiente ilegible no debe romper la página.
+    }
+}
+
+// Avisa una sola vez si se pierde la conexión: sin internet, Firebase deja las
+// operaciones en espera y el usuario no recibiría ninguna respuesta.
+let sinConexion = false
+
+window.addEventListener('offline', () => {
+    sinConexion = true
+    notificar('Perdiste la conexión a internet. Tus cambios se guardarán cuando vuelvas a conectarte.', 'advertencia')
+})
+
+window.addEventListener('online', () => {
+    if (!sinConexion) return
+    sinConexion = false
+    notificar('Conexión restablecida.', 'exito')
+})
+
+mostrarPendiente()

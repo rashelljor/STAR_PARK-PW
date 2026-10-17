@@ -27,16 +27,22 @@ export async function getProductById(id) {
     return (await leerProductos()).find(producto => producto.id === id)
 }
 
-// Búsqueda simple por nombre o descripción, usada por el buscador de la tienda.
-export async function searchProducts(termino) {
-    const texto = (termino || '').trim().toLowerCase()
+// Quita tildes y mayúsculas: "Misión", "MISION" y "mision" se comparan igual.
+function normalizar(texto) {
+    return String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+}
 
-    if (!texto) return []
+// Búsqueda del buscador de la tienda, sobre los productos ya cargados (no vuelve
+// a consultar Firestore en cada tecla). Coincidencia parcial por nombre o
+// descripción; con varias palabras ("aventura nave") deben aparecer todas,
+// en cualquier orden.
+export function searchProducts(termino, productos) {
+    const palabras = normalizar(termino).split(/\s+/).filter(Boolean)
+    if (!palabras.length) return []
 
-    return (await getActiveProducts()).filter(producto => {
-        const nombre = producto.nombre?.toLowerCase() || ''
-        const descripcion = producto.descripcion?.toLowerCase() || ''
-        return nombre.includes(texto) || descripcion.includes(texto)
+    return productos.filter(producto => {
+        const texto = normalizar(producto.nombre + ' ' + producto.descripcion)
+        return palabras.every(palabra => texto.includes(palabra))
     })
 }
 

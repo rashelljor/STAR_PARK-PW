@@ -19,7 +19,7 @@
 
 .itemCarrito button {
     background: transparent;
-    color: #ff6b6b;
+    color: var(--rojo);
 }
 
 /* En móvil, productos y formulario se apilan en una sola columna. */

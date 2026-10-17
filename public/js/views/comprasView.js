@@ -1,5 +1,6 @@
 // MisCompras.js - Vista de "Mis Compras" (antes users/miscompras.html y
 // controller/miscompras.js). Muestra las boletas de las compras confirmadas.
+// Diseño de la boleta en assets/css/compras.css (1440px, 800px y 640px).
 
 import Header from '../components/Header.js'
 import Footer from '../components/Footer.js'
@@ -7,7 +8,7 @@ import { db } from '../config/firebaseConfig.js'
 import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
 import { obtenerCompras } from '../services/purchaseService.js'
 import { esperarUsuario, obtenerPerfil } from '../services/authService.js'
-import { notificar } from '../utils/notificaciones.js'
+import { notificar, notificarAlCargar } from '../utils/notificaciones.js'
 import { formatearPrecio, formatearFechaHora } from '../utils/formatters.js'
 import { CONTENIDO_INICIAL } from '../utils/contenidoInicial.js'
 
@@ -19,6 +20,7 @@ export default {
         return {
             compras: [],
             perfil: null,
+            cargando: true,
             direccion: CONTENIDO_INICIAL.ubicacion
         }
     },
@@ -26,23 +28,36 @@ export default {
     async mounted() {
         const usuario = await esperarUsuario()
         if (!usuario) {
-            await notificar('Inicia sesión para ver tus compras.', 'advertencia')
+            notificarAlCargar('Inicia sesión para ver tus compras.', 'advertencia')
             window.location.href = 'login.html'
             return
         }
 
-        this.compras = await obtenerCompras()
-        this.perfil = await obtenerPerfil(usuario.uid)
+        try {
+            // Las compras más recientes primero.
+            const compras = await obtenerCompras()
+            this.compras = compras.sort((a, b) => this.milisegundos(b.fecha) - this.milisegundos(a.fecha))
+        } catch (error) {
+            console.error(error)
+            notificar('No se pudieron cargar tus compras. Recarga la página para intentarlo de nuevo.', 'error')
+            return
+        } finally {
+            this.cargando = false
+        }
 
-        const contenido = await getDoc(doc(db, 'contenido', 'institucional'))
-        if (contenido.exists() && contenido.data().ubicacion) this.direccion = contenido.data().ubicacion
+        // Perfil y dirección son datos complementarios de la boleta: si fallan,
+        // la boleta se muestra con los valores por defecto sin alarmar al cliente.
+        this.perfil = await obtenerPerfil(usuario.uid).catch(() => null)
+        const contenido = await getDoc(doc(db, 'contenido', 'institucional')).catch(() => null)
+        if (contenido?.exists() && contenido.data().ubicacion) this.direccion = contenido.data().ubicacion
     },
 
     methods: {
         formatearPrecio,
 
-        numeroCompra(indice) {
-            return (indice + 1).toString().padStart(2, '0')
+        milisegundos(fecha) {
+            if (!fecha) return 0
+            return typeof fecha.toMillis === 'function' ? fecha.toMillis() : new Date(fecha).getTime()
         },
 
         // Serie y correlativo del comprobante: se deriva del id único del
@@ -56,6 +71,19 @@ export default {
             if (!fecha) return ''
             const fechaJs = typeof fecha.toDate === 'function' ? fecha.toDate() : new Date(fecha)
             return formatearFechaHora(fechaJs)
+        },
+
+        // El carrito guarda una línea por unidad; en la boleta se agrupan los
+        // productos iguales con su cantidad, como en un comprobante real.
+        detalle(compra) {
+            const grupos = new Map()
+            ;(compra.items || []).forEach(item => {
+                const clave = item.nombre + '|' + item.precio
+                const grupo = grupos.get(clave) || { nombre: item.nombre, precio: Number(item.precio || 0), cantidad: 0 }
+                grupo.cantidad++
+                grupos.set(clave, grupo)
+            })
+            return [...grupos.values()]
         }
     },
 
@@ -70,67 +98,75 @@ export default {
                 </div>
 
                 <div id="listaCompras">
-                    <p v-if="compras.length === 0" class="etiqueta glass text-center p-4">No has realizado ninguna compra todavía</p>
+                    <p v-if="cargando" class="etiqueta glass text-center p-4">Cargando tus boletas...</p>
+                    <div v-else-if="compras.length === 0" class="boletaVacia glass">
+                        <p>No has realizado ninguna compra todavía.</p>
+                        <a class="btn botonAmarillo" href="reservas.html">Ver mis reservas</a>
+                    </div>
 
-                    <section v-for="(compra, indice) in compras" :key="indice" class="glass bloqueFormulario">
-                        <div class="totalFila">
+                    <article v-for="compra in compras" :key="compra.id" class="boleta">
+                        <!-- Cabecera: emisor a la izquierda y recuadro del comprobante a la derecha. -->
+                        <header class="boletaCabecera">
+                            <div class="boletaEmisor">
+                                <img src="../../assets/img/logostar.png" alt="" class="boletaLogo">
+                                <div>
+                                    <p class="boletaEmpresa">FAMILY PARK S.A.C.</p>
+                                    <p class="boletaDato">{{ direccion }}</p>
+                                </div>
+                            </div>
+                            <div class="boletaRecuadro">
+                                <p>R.U.C. 20555297018</p>
+                                <p class="boletaTipo">BOLETA DE VENTA ELECTRÓNICA</p>
+                                <p class="boletaSerie">{{ serieCompra(compra) }}</p>
+                            </div>
+                        </header>
+
+                        <!-- Datos del cliente y de la operación. -->
+                        <dl class="boletaInfo">
                             <div>
-                                <h3 class="celeste">BOLETA DE VENTA ELECTRÓNICA</h3>
-                                <p class="etiqueta">Serie {{ serieCompra(compra) }}</p>
+                                <dt>Cliente</dt>
+                                <dd>{{ perfil?.nombreCompleto || 'Cliente Star Park' }}</dd>
                             </div>
-                            <div class="text-md-end">
-                                <p class="etiquetaGris">FECHA DE EMISIÓN</p>
-                                <p class="celeste">{{ fechaLegible(compra.fecha) }}</p>
-                            </div>
-                        </div>
-
-                        <div class="separadorFormulario"></div>
-
-                        <div class="totalFila">
                             <div>
-                                <p class="etiquetaGris">EMISOR</p>
-                                <h3>FAMILY PARK S.A.C.</h3>
-                                <p>RUC: 20555297018</p>
-                                <p>{{ direccion }}</p>
+                                <dt>{{ perfil?.tipoDocumento || 'Documento' }}</dt>
+                                <dd>{{ perfil?.numeroDocumento || 'No especificado' }}</dd>
                             </div>
-                            <div class="text-md-end">
-                                <p class="etiquetaGris">CLIENTE</p>
-                                <h3>{{ perfil?.nombreCompleto || 'Cliente Star Park' }}</h3>
-                                <p>{{ perfil?.tipoDocumento || 'DNI' }}: {{ perfil?.numeroDocumento || 'No especificado' }}</p>
+                            <div>
+                                <dt>Fecha de emisión</dt>
+                                <dd>{{ fechaLegible(compra.fecha) }}</dd>
+                            </div>
+                            <div>
+                                <dt>Moneda</dt>
+                                <dd>Soles (PEN)</dd>
+                            </div>
+                        </dl>
+
+                        <!-- Detalle: en 640px cada fila pasa a dos líneas (ver compras.css). -->
+                        <div class="boletaDetalle" role="table" aria-label="Detalle de la compra">
+                            <div class="boletaFila boletaFilaTitulo" role="row">
+                                <span role="columnheader">Descripción</span>
+                                <span role="columnheader" class="numero">Cant.</span>
+                                <span role="columnheader" class="numero">P. Unit.</span>
+                                <span role="columnheader" class="numero">Importe</span>
+                            </div>
+                            <div v-for="linea in detalle(compra)" :key="linea.nombre + linea.precio" class="boletaFila" role="row">
+                                <span role="cell" class="boletaDescripcion">{{ linea.nombre }}</span>
+                                <span role="cell" class="numero boletaCantidad">{{ linea.cantidad }}</span>
+                                <span role="cell" class="numero boletaUnitario">{{ formatearPrecio(linea.precio) }}</span>
+                                <span role="cell" class="numero boletaImporte">{{ formatearPrecio(linea.precio * linea.cantidad) }}</span>
                             </div>
                         </div>
 
-                        <div class="separadorFormulario"></div>
-
-                        <div>
-                            <p class="etiquetaGris">DETALLE DE LA OPERACIÓN</p>
-                            <table class="table table-dark table-sm mb-0">
-                                <thead>
-                                    <tr>
-                                        <th>Descripción</th>
-                                        <th>Cantidad</th>
-                                        <th>P. Unitario</th>
-                                        <th>Importe</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="(item, i) in compra.items" :key="i">
-                                        <td>{{ item.nombre }}</td>
-                                        <td>1</td>
-                                        <td>{{ formatearPrecio(item.precio) }}</td>
-                                        <td>{{ formatearPrecio(item.precio) }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <div class="boletaTotal">
+                            <span>Importe total</span>
+                            <strong>{{ compra.total }}</strong>
                         </div>
 
-                        <div class="totalFila">
-                            <p>IMPORTE TOTAL A PAGAR (SOLES)</p>
-                            <p class="amarillo">{{ compra.total }}</p>
-                        </div>
-
-                        <p class="etiquetaGris text-center">¡Gracias por tu preferencia!</p>
-                    </section>
+                        <footer class="boletaPie">
+                            <span class="boletaEstado">✓ Pagado</span>
+                            <p>¡Gracias por tu preferencia, astronauta!</p>
+                        </footer>
+                    </article>
                 </div>
             </main>
 
