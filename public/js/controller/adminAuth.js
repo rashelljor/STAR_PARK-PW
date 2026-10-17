@@ -5,13 +5,13 @@ import {
     signOut
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js'
 import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
+import { notificar } from '../utils/notificaciones.js'
 
 const formulario = document.getElementById('formLogin')
-const errorGeneral = document.getElementById('errorGeneral')
 const boton = formulario?.querySelector('button[type="submit"]')
 
 function mostrarError(mensaje) {
-    if (errorGeneral) errorGeneral.textContent = mensaje
+    notificar(mensaje, 'error')
 }
 
 function mensajeError(error) {
@@ -27,7 +27,6 @@ async function esAdministrador(usuario) {
 
 formulario?.addEventListener('submit', async (evento) => {
     evento.preventDefault()
-    mostrarError('')
     boton.disabled = true
 
     const correo = document.getElementById('usuario').value.trim()

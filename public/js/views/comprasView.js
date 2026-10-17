@@ -7,6 +7,7 @@ import { db } from '../config/firebaseConfig.js'
 import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
 import { obtenerCompras } from '../services/purchaseService.js'
 import { esperarUsuario, obtenerPerfil } from '../services/authService.js'
+import { notificar } from '../utils/notificaciones.js'
 import { formatearPrecio, formatearFechaHora } from '../utils/formatters.js'
 import { CONTENIDO_INICIAL } from '../utils/contenidoInicial.js'
 
@@ -25,7 +26,7 @@ export default {
     async mounted() {
         const usuario = await esperarUsuario()
         if (!usuario) {
-            alert('Inicia sesión para ver tus compras.')
+            await notificar('Inicia sesión para ver tus compras.', 'advertencia')
             window.location.href = 'login.html'
             return
         }

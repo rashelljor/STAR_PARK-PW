@@ -4,6 +4,7 @@ import { collection, doc, getDoc, getDocs, query, where } from 'https://www.gsta
 import HeaderAdmin from '../components/HeaderAdmin.js'
 import { crear, actualizar, eliminar, listar, escuchar, obtenerDocumento, guardarDocumento } from '../services/adminService.js'
 import { CONTENIDO_INICIAL, ATRACCIONES_INICIALES, SERVICIOS_INICIALES, PRODUCTOS_INICIALES } from '../utils/contenidoInicial.js'
+import { notificar, confirmar } from '../utils/notificaciones.js'
 
 const pagina = document.body.dataset.adminPage
 const app = document.getElementById('adminApp')
@@ -47,11 +48,11 @@ function panelCatalogo(elemento) {
     const formulario = document.getElementById('formCatalogo')
     const tabla = document.getElementById('tablaCatalogo')
     const importar = document.getElementById('importarCatalogo')
-    importar.onclick = async () => { await Promise.all(PRODUCTOS_INICIALES.map(({ id, ...producto }) => crear('productos', producto))); await cargar() }
+    importar.onclick = async () => { try { await Promise.all(PRODUCTOS_INICIALES.map(({ id, ...producto }) => crear('productos', producto))); await cargar(); notificar('Productos importados al catálogo.', 'exito') } catch (fallo) { console.error(fallo); notificar('No se pudieron importar los productos: ' + fallo.message, 'error') } }
     const cargar = () => listar('productos').then(productos => { importar.classList.toggle('d-none', productos.length > 0); tabla.innerHTML = productos.map(producto => `<tr><td>${escapar(producto.nombre)}</td><td>${escapar(producto.categoria)}</td><td>S/ ${Number(producto.precio || 0).toFixed(2)}</td><td>${escapar(producto.estado || 'Activo')}</td><td><button class="btn btn-sm btn-outline-info" data-edit="${producto.id}">Editar</button> ${botonAccion('productos', producto.id)}</td></tr>`).join('') })
-    formulario.addEventListener('submit', async evento => { evento.preventDefault(); const datos = Object.fromEntries(new FormData(formulario)); datos.precio = Number(datos.precio); datos.estado = 'Activo'; const id = datos.id; delete datos.id; id ? await actualizar('productos', id, datos) : await crear('productos', datos); formulario.reset(); await cargar() })
+    formulario.addEventListener('submit', async evento => { evento.preventDefault(); const datos = Object.fromEntries(new FormData(formulario)); datos.precio = Number(datos.precio); datos.estado = 'Activo'; const id = datos.id; delete datos.id; try { id ? await actualizar('productos', id, datos) : await crear('productos', datos); formulario.reset(); await cargar(); notificar(id ? 'Producto actualizado.' : 'Producto agregado al catálogo.', 'exito') } catch (fallo) { console.error(fallo); notificar('No se pudo guardar el producto: ' + fallo.message, 'error') } })
     document.getElementById('limpiarCatalogo').onclick = () => formulario.reset()
-    tabla.addEventListener('click', async evento => { const boton = evento.target.closest('[data-delete], [data-edit]'); if (!boton) return; if (boton.dataset.delete) { if (confirm('¿Eliminar este registro?')) await eliminar(boton.dataset.delete, boton.dataset.id) } else { const producto = (await listar('productos')).find(item => item.id === boton.dataset.edit); Object.entries(producto).forEach(([clave, valor]) => { if (formulario.elements[clave]) formulario.elements[clave].value = valor }) } await cargar() })
+    tabla.addEventListener('click', async evento => { const boton = evento.target.closest('[data-delete], [data-edit]'); if (!boton) return; if (boton.dataset.delete) { if (!await confirmar('¿Eliminar este producto del catálogo?', { textoConfirmar: 'Eliminar', tipo: 'error' })) return; try { await eliminar(boton.dataset.delete, boton.dataset.id); notificar('Producto eliminado.', 'exito') } catch (fallo) { console.error(fallo); notificar('No se pudo eliminar el producto: ' + fallo.message, 'error') } } else { const producto = (await listar('productos')).find(item => item.id === boton.dataset.edit); Object.entries(producto).forEach(([clave, valor]) => { if (formulario.elements[clave]) formulario.elements[clave].value = valor }) } await cargar() })
     cargar()
 }
 
@@ -95,21 +96,18 @@ function seccionLista(contenedor, { coleccion, titulo, textoAgregar, campos, ini
             <div class="mt-3 d-flex gap-2 align-items-center">
                 <button class="btn btn-warning">Guardar</button>
                 <button type="button" class="btn btn-outline-light" data-cancelar>Cancelar</button>
-                <span class="text-danger" data-error></span>
             </div>
         </form>
         <div data-lista><p class="text-white-50">Cargando...</p></div>`
 
     const formulario = contenedor.querySelector('[data-form]')
     const lista = contenedor.querySelector('[data-lista]')
-    const error = contenedor.querySelector('[data-error]')
     let items = []
 
     const abrirFormulario = item => {
         formulario.reset()
         formulario.elements.id.value = item ? item.id : ''
         if (item) campos.forEach(campo => { formulario.elements[campo.name].value = item[campo.name] || '' })
-        error.textContent = ''
         formulario.classList.remove('d-none')
         formulario.elements.nombre.focus()
     }
@@ -162,9 +160,10 @@ function seccionLista(contenedor, { coleccion, titulo, textoAgregar, campos, ini
             if (id) await actualizar(coleccion, id, datos)
             else await crear(coleccion, { ...datos, orden: Date.now() })
             cerrarFormulario()
+            notificar('Guardado. Ya se ve en el index.', 'exito')
         } catch (fallo) {
             console.error(fallo)
-            error.textContent = 'No se pudo guardar: ' + fallo.message
+            notificar('No se pudo guardar: ' + fallo.message, 'error')
         }
     })
 
@@ -173,14 +172,19 @@ function seccionLista(contenedor, { coleccion, titulo, textoAgregar, campos, ini
         if (!boton) return
         try {
             if (boton.dataset.edit) abrirFormulario(items.find(item => item.id === boton.dataset.edit))
-            else if (boton.dataset.delete) { if (confirm('¿Borrar este elemento del index?')) await eliminar(coleccion, boton.dataset.delete) }
+            else if (boton.dataset.delete) {
+                if (!await confirmar('¿Borrar este elemento del index?', { textoConfirmar: 'Borrar', tipo: 'error' })) return
+                await eliminar(coleccion, boton.dataset.delete)
+                notificar('Elemento borrado del index.', 'exito')
+            }
             else if (boton.hasAttribute('data-importar')) {
                 const base = Date.now()
                 await Promise.all(iniciales.map((item, indice) => crear(coleccion, { ...item, orden: base + indice })))
+                notificar('Elementos importados. Ya se ven en el index.', 'exito')
             }
         } catch (fallo) {
             console.error(fallo)
-            alert('No se pudo completar la acción: ' + fallo.message)
+            notificar('No se pudo completar la acción: ' + fallo.message, 'error')
         }
     })
 }
@@ -198,7 +202,6 @@ function panelContenido(elemento) {
                 <label class="text-white w-100 mb-3">Horario<textarea class="form-control" name="horarios" rows="2" required></textarea></label>
                 <label class="text-white w-100 mb-3">Contacto<textarea class="form-control" name="contacto" rows="2" required></textarea></label>
                 <button class="btn btn-warning">Guardar cambios</button>
-                <span class="ms-3" id="estadoContenido"></span>
             </form>
         </section>`
 
@@ -212,7 +215,6 @@ function panelContenido(elemento) {
     })
 
     const formulario = document.getElementById('formContenido')
-    const estado = document.getElementById('estadoContenido')
     obtenerDocumento('contenido', 'institucional').then(guardado => {
         const valores = { ...CONTENIDO_INICIAL, ...guardado }
         Object.keys(CONTENIDO_INICIAL).forEach(clave => { formulario.elements[clave].value = valores[clave] })
@@ -223,12 +225,10 @@ function panelContenido(elemento) {
         const datos = Object.fromEntries(new FormData(formulario))
         try {
             await guardarDocumento('contenido', 'institucional', datos)
-            estado.className = 'ms-3 text-success'
-            estado.textContent = 'Guardado. Ya se ve en el index.'
+            notificar('Guardado. Ya se ve en el index.', 'exito')
         } catch (fallo) {
             console.error(fallo)
-            estado.className = 'ms-3 text-danger'
-            estado.textContent = 'No se pudo guardar: ' + fallo.message
+            notificar('No se pudo guardar: ' + fallo.message, 'error')
         }
     })
 }
@@ -237,8 +237,8 @@ function panelUsuarios(elemento) {
     elemento.innerHTML = `<h1 class="text-white">Control de usuarios y roles</h1><div class="glass p-4"><div class="table-responsive"><table class="table table-dark"><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Acciones</th></tr></thead><tbody id="tablaUsuarios"></tbody></table></div></div>`
     const tabla = document.getElementById('tablaUsuarios')
     const cargar = () => listar('usuarios').then(usuarios => { tabla.innerHTML = usuarios.map(usuario => `<tr><td>${escapar(usuario.nombreCompleto || usuario.nombreUsuario)}</td><td>${escapar(usuario.correo)}</td><td><select class="form-select form-select-sm" data-role="${usuario.id}"><option ${usuario.rol === 'admin' ? 'selected' : ''}>admin</option><option ${usuario.rol !== 'admin' ? 'selected' : ''}>cliente</option></select></td><td>${usuario.rol === 'admin' ? '' : botonAccion('usuarios', usuario.id)}</td></tr>`).join('') })
-    tabla.addEventListener('change', evento => { if (evento.target.dataset.role) actualizar('usuarios', evento.target.dataset.role, { rol: evento.target.value }) })
-    tabla.addEventListener('click', async evento => { const boton = evento.target.closest('[data-delete]'); if (boton && confirm('¿Eliminar este perfil?')) await eliminar('usuarios', boton.dataset.id); cargar() })
+    tabla.addEventListener('change', async evento => { if (!evento.target.dataset.role) return; try { await actualizar('usuarios', evento.target.dataset.role, { rol: evento.target.value }); notificar('Rol actualizado a "' + evento.target.value + '".', 'exito') } catch (fallo) { console.error(fallo); notificar('No se pudo cambiar el rol: ' + fallo.message, 'error'); cargar() } })
+    tabla.addEventListener('click', async evento => { const boton = evento.target.closest('[data-delete]'); if (!boton || !await confirmar('¿Eliminar este perfil?', { textoConfirmar: 'Eliminar', tipo: 'error' })) return; try { await eliminar('usuarios', boton.dataset.id); notificar('Perfil eliminado.', 'exito') } catch (fallo) { console.error(fallo); notificar('No se pudo eliminar el perfil: ' + fallo.message, 'error') } cargar() })
     cargar()
 }
 

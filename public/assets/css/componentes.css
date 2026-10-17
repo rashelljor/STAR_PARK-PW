@@ -229,3 +229,139 @@
         padding: 20px;
     }
 }
+
+/* Mensajes centrados (js/utils/notificaciones.js).
+   Un solo estilo para confirmaciones, errores, advertencias e información;
+   cada tipo cambia solo su color de acento. */
+.mensajeFondo {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(8, 9, 14, 0.7);
+  backdrop-filter: blur(4px);
+  animation: mensajeAparecer 0.18s ease-out;
+}
+
+.mensajeSaliendo { animation: mensajeDesaparecer 0.15s ease-in forwards; }
+
+.mensajeCaja {
+  --acento: var(--celeste);
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  max-width: 420px;
+  padding: 32px 28px 28px;
+  text-align: center;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-top: 5px solid var(--acento);
+  border-radius: var(--redondeo);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 0 1px color-mix(in srgb, var(--acento) 15%, transparent);
+  animation: mensajeEntrar 0.22s ease-out;
+}
+
+.mensaje-exito { --acento: #3ddc97; }
+.mensaje-error { --acento: #ff5c7a; }
+.mensaje-advertencia { --acento: var(--amarillo); }
+.mensaje-info { --acento: var(--celeste); }
+
+.mensajeIcono {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--acento);
+  background: color-mix(in srgb, var(--acento) 15%, transparent);
+  border: 2px solid var(--acento);
+}
+
+.mensajeTitulo {
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+
+.mensajeTexto,
+.mensajeTexto li {
+  color: var(--texto);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.mensajeTexto ul {
+  text-align: left;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.mensajeAcciones {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.mensajeBoton {
+  min-width: 120px;
+  padding: 10px 24px;
+  border: 2px solid var(--acento);
+  border-radius: 999px;
+  background: var(--acento);
+  color: #11131b;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mensajeBoton:hover { filter: brightness(1.1); }
+.mensajeBoton:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
+
+.mensajeBotonSecundario {
+  background: transparent;
+  color: var(--texto);
+  border-color: var(--borde);
+}
+
+.mensajeBotonSecundario:hover { border-color: var(--texto); filter: none; }
+
+/* Barra que se vacía mientras un mensaje de éxito se cierra solo. */
+.mensajeProgreso {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 4px;
+  width: 100%;
+  background: var(--acento);
+  transform-origin: left;
+  animation-name: mensajeVaciar;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+/* Texto de error bajo cada campo de formulario, con el mismo rojo de los mensajes. */
+.mensajeError {
+  color: #ff5c7a;
+  font-size: 13px;
+  margin: 0;
+}
+
+.mensajeError:empty { display: none; }
+
+@keyframes mensajeAparecer { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mensajeDesaparecer { to { opacity: 0; } }
+@keyframes mensajeEntrar { from { opacity: 0; transform: translateY(12px) scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes mensajeVaciar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .mensajeFondo, .mensajeCaja, .mensajeSaliendo { animation: none; }
+}

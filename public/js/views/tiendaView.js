@@ -9,6 +9,7 @@ import Loading from '../components/Loading.js'
 import { getProductsByCategory, searchProducts } from '../services/catalogService.js'
 import { agregarProducto } from '../services/cartService.js'
 import { esperarUsuario } from '../services/authService.js'
+import { notificar } from '../utils/notificaciones.js'
 
 export default {
 
@@ -32,6 +33,7 @@ export default {
         } catch (error) {
             console.error(error)
             this.error = 'No se pudo cargar el catálogo.'
+            notificar('No se pudo cargar el catálogo. Recarga la página para intentarlo de nuevo.', 'error')
         } finally {
             this.cargando = false
         }
@@ -45,17 +47,17 @@ export default {
         async agregarAlCarrito(producto) {
             const usuario = await esperarUsuario()
             if (!usuario) {
-                alert('Inicia sesión para agregar productos al carrito.')
+                await notificar('Inicia sesión para agregar productos al carrito.', 'advertencia')
                 window.location.href = 'login.html'
                 return
             }
 
             try {
                 await agregarProducto(producto)
-                alert(producto.nombre + ' añadido al carrito')
+                notificar(producto.nombre + ' se añadió al carrito.', 'exito')
             } catch (error) {
                 console.error(error)
-                alert('No se pudo agregar el producto. Intenta nuevamente.')
+                notificar('No se pudo agregar el producto. Intenta nuevamente.', 'error')
             }
         }
     },

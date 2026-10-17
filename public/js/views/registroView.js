@@ -1,6 +1,7 @@
 import Header from '../components/Header.js'
 import Footer from '../components/Footer.js'
 import { registrarUsuario } from '../services/authService.js'
+import { notificar } from '../utils/notificaciones.js'
 import {
     esCorreoValido,
     esContrasenaValida,
@@ -72,7 +73,10 @@ export default {
                 tieneError = true
             }
 
-            if (tieneError) return
+            if (tieneError) {
+                notificar(Object.values(this.errores), 'error')
+                return
+            }
 
             const resultado = await registrarUsuario({
                 correo: this.correo.trim(),
@@ -87,10 +91,12 @@ export default {
             })
 
             if (!resultado.ok) {
-                this.errores[resultado.campo || 'general'] = resultado.mensaje
+                if (resultado.campo && resultado.campo !== 'general') this.errores[resultado.campo] = resultado.mensaje
+                notificar(resultado.mensaje, 'error')
                 return
             }
 
+            await notificar('¡Cuenta creada! Ya puedes iniciar sesión.', 'exito')
             window.location.href = 'login.html'
         }
     },

@@ -11,6 +11,7 @@ import {
     eliminarReserva
 } from '../services/bookingService.js'
 import { esperarUsuario } from '../services/authService.js'
+import { notificar, confirmar } from '../utils/notificaciones.js'
 import { formatearFechaHora } from '../utils/formatters.js'
 
 export default {
@@ -19,15 +20,14 @@ export default {
 
     data() {
         return {
-            reservas: [],
-            alerta: null
+            reservas: []
         }
     },
 
     async mounted() {
         const usuario = await esperarUsuario()
         if (!usuario) {
-            alert('Inicia sesión para ver tus reservas.')
+            await notificar('Inicia sesión para ver tus reservas.', 'advertencia')
             window.location.href = 'login.html'
             return
         }
@@ -36,16 +36,9 @@ export default {
     },
 
     methods: {
+        // Si no hay reservas, la tabla ya muestra "No hay reservas aún.".
         async cargar() {
             this.reservas = await obtenerReservas()
-
-            if (this.reservas.length === 0) {
-                this.mostrarAlerta('No hay reservas aún.', 'info')
-            }
-        },
-
-        mostrarAlerta(mensaje, tipo) {
-            this.alerta = { mensaje, tipo }
         },
 
         fechaLegible(fecha) {
@@ -55,9 +48,14 @@ export default {
         },
 
         async pagar(indice) {
-            await pagarReserva(this.reservas[indice])
-            await this.cargar()
-            alert('Pago confirmado. Revisa Mis Compras.')
+            try {
+                await pagarReserva(this.reservas[indice])
+                await this.cargar()
+                notificar('Pago confirmado. Revisa tu boleta en Mis Compras.', 'exito')
+            } catch (error) {
+                console.error(error)
+                notificar('No se pudo procesar el pago. Intenta nuevamente.', 'error')
+            }
         },
 
         async editar(indice) {
@@ -71,21 +69,32 @@ export default {
                 return
             }
 
-            await actualizarReserva(reserva.id, {
-                nombre: nombre.trim(),
-                correo: correo.trim(),
-                telefono: telefono.trim(),
-                fecha: fecha.trim()
-            })
-
-            await this.cargar()
-            this.mostrarAlerta('Reserva actualizada correctamente.', 'success')
+            try {
+                await actualizarReserva(reserva.id, {
+                    nombre: nombre.trim(),
+                    correo: correo.trim(),
+                    telefono: telefono.trim(),
+                    fecha: fecha.trim()
+                })
+                await this.cargar()
+                notificar('Reserva actualizada correctamente.', 'exito')
+            } catch (error) {
+                console.error(error)
+                notificar('No se pudo actualizar la reserva. Intenta nuevamente.', 'error')
+            }
         },
 
         async eliminar(indice) {
-            await eliminarReserva(this.reservas[indice].id)
-            await this.cargar()
-            this.mostrarAlerta('Reserva eliminada correctamente.', 'success')
+            if (!await confirmar('¿Quitar esta reserva? Esta acción no se puede deshacer.', { textoConfirmar: 'Quitar', tipo: 'error' })) return
+
+            try {
+                await eliminarReserva(this.reservas[indice].id)
+                await this.cargar()
+                notificar('Reserva eliminada correctamente.', 'exito')
+            } catch (error) {
+                console.error(error)
+                notificar('No se pudo eliminar la reserva. Intenta nuevamente.', 'error')
+            }
         }
     },
 
@@ -94,10 +103,6 @@ export default {
             <Header />
 
             <main>
-                <div id="alertContainer" class="container mt-4">
-                    <div v-if="alerta" :class="'alert alert-' + alerta.tipo" role="alert">{{ alerta.mensaje }}</div>
-                </div>
-
                 <div class="text-center text-white p-3 p-md-5">
                     <h1>PANEL DE RESERVA EN <br> <em class="celeste">STAR </em><em>PARK</em></h1><br>
                     <p class="etiqueta">Todas tus reservas registradas</p>

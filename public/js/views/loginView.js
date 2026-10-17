@@ -1,6 +1,7 @@
 import Header from '../components/Header.js'
 import Footer from '../components/Footer.js'
 import { iniciarSesion } from '../services/authService.js'
+import { notificar } from '../utils/notificaciones.js'
 
 export default {
 
@@ -33,12 +34,15 @@ export default {
                 tieneError = true
             }
 
-            if (tieneError) return
+            if (tieneError) {
+                notificar(Object.values(this.errores).filter(Boolean), 'error')
+                return
+            }
 
             const resultado = await iniciarSesion(this.usuario.trim(), this.contrasena)
 
             if (!resultado.ok) {
-                this.errores.general = resultado.mensaje
+                notificar(resultado.mensaje, 'error')
                 return
             }
 
@@ -89,7 +93,6 @@ export default {
                                 <p class="mensajeError" role="alert">{{ errores.contrasena }}</p>
                             </div>
 
-                            <p class="mensajeError" role="alert">{{ errores.general }}</p>
                             <div class="d-flex justify-content-center">
                                 <button type="submit" class="btn btn-primary rounded-pill botonAmarillo botonAncho">Iniciar sesión</button>
                             </div>

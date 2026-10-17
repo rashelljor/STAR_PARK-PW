@@ -9,6 +9,7 @@ import { obtenerCarrito, quitarProducto, calcularTotal, limpiarCarrito } from '.
 import { crearReserva } from '../services/bookingService.js'
 import { formatearPrecio } from '../utils/formatters.js'
 import { esperarUsuario, obtenerPerfil } from '../services/authService.js'
+import { notificar } from '../utils/notificaciones.js'
 
 export default {
 
@@ -37,7 +38,7 @@ export default {
     async mounted() {
         const usuario = await esperarUsuario()
         if (!usuario) {
-            alert('Inicia sesión para ver tu carrito.')
+            await notificar('Inicia sesión para ver tu carrito.', 'advertencia')
             window.location.href = 'login.html'
             return
         }
@@ -63,24 +64,29 @@ export default {
 
         async confirmarReserva() {
             if (this.carrito.length === 0) {
-                alert('Tu carrito está vacío.')
+                notificar('Tu carrito está vacío. Agrega productos desde la tienda.', 'advertencia')
                 return
             }
 
-            await crearReserva({
-                nombre: this.formulario.nombre,
-                correo: this.formulario.correo,
-                telefono: this.formulario.telefono,
-                fecha: this.formulario.fecha,
-                total: formatearPrecio(this.total),
-                items: this.carrito
-            })
+            try {
+                await crearReserva({
+                    nombre: this.formulario.nombre,
+                    correo: this.formulario.correo,
+                    telefono: this.formulario.telefono,
+                    fecha: this.formulario.fecha,
+                    total: formatearPrecio(this.total),
+                    items: this.carrito
+                })
 
-            await limpiarCarrito()
-            this.carrito = []
-            this.formulario = { nombre: '', correo: '', telefono: '', fecha: '' }
+                await limpiarCarrito()
+                this.carrito = []
+                this.formulario = { nombre: '', correo: '', telefono: '', fecha: '' }
 
-            alert('¡Reserva confirmada!')
+                notificar('¡Reserva confirmada! Puedes pagarla desde Mis Reservas.', 'exito')
+            } catch (error) {
+                console.error(error)
+                notificar('No se pudo registrar la reserva. Intenta nuevamente.', 'error')
+            }
         }
     },
 
