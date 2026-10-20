@@ -2,7 +2,8 @@
 // Escritorio (≥ 992px): barra completa con submenús al pasar el mouse.
 // Tablet y celular: menú hamburguesa con botones grandes que se cierra al elegir una opción.
 
-import { auth, obtenerPerfil, cerrarSesion } from '../services/authService.js'
+import { auth, obtenerPerfil, cerrarSesion, guardarFotoPerfil } from '../services/authService.js'
+import { prepararImagen, indicacionImagen, formatosAceptados } from '../services/imageService.js'
 import { obtenerCarrito, contarUnidades, EVENTO_CARRITO } from '../services/cartService.js'
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js'
 import { notificar, confirmar, notificarAlCargar } from '../utils/notificaciones.js'
@@ -16,6 +17,9 @@ export default {
     data() {
         return {
             nombre: '',
+            foto: '',
+            indicacionFoto: indicacionImagen('perfil'),
+            formatosFoto: formatosAceptados(),
             esAdmin: false,
             cantidadCarrito: 0,
             rebote: false,
@@ -29,12 +33,14 @@ export default {
         this.detenerEscucha = onAuthStateChanged(auth, async usuario => {
             if (!usuario) {
                 this.nombre = ''
+                this.foto = ''
                 this.esAdmin = false
                 this.cantidadCarrito = 0
                 return
             }
             const perfil = await obtenerPerfil(usuario.uid).catch(() => null)
             this.nombre = perfil?.nombreCompleto?.trim().split(' ')[0] || 'Astronauta'
+            this.foto = perfil?.foto || ''
             this.esAdmin = perfil?.rol === 'admin'
             this.cantidadCarrito = contarUnidades(await obtenerCarrito().catch(() => []))
         })
@@ -83,6 +89,21 @@ export default {
         claseEnlace(pagina, seccion = '') {
             const activo = seccion ? this.seccionActiva === seccion : this.pagina === pagina && !(pagina === 'inicio' && this.seccionActiva)
             return activo ? 'active' : ''
+        },
+
+        async cambiarFoto(evento) {
+            const archivo = evento.target.files[0]
+            evento.target.value = ''
+            if (!archivo) return
+            try {
+                const imagen = await prepararImagen(archivo, 'perfil')
+                await guardarFotoPerfil(imagen)
+                this.foto = imagen
+                notificar('Foto de perfil actualizada.', 'exito')
+            } catch (error) {
+                console.error(error)
+                notificar('No se pudo guardar la foto: ' + error.message + ' (' + this.indicacionFoto + ')', 'error')
+            }
         },
 
         cambiarTema() {
@@ -174,9 +195,19 @@ export default {
                                 <span v-if="cantidadCarrito" class="contadorCarrito" :class="{ rebote }" :aria-label="cantidadCarrito + ' productos'">{{ cantidadCarrito }}</span>
                             </a>
 
-                            <!-- Con sesión: saludo + cerrar sesión. Sin sesión: enlace a login. -->
+                            <!-- Con sesión: foto + saludo + cerrar sesión. Sin sesión: enlace a login.
+                                 La foto se cambia tocándola; se muestra en círculo, recortada al centro. -->
                             <template v-if="nombre">
-                                <span class="saludoUsuario">Hola, {{ nombre }}</span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <label class="btn btn-outline-light rounded-circle p-0 d-inline-flex align-items-center justify-content-center overflow-hidden flex-shrink-0"
+                                        style="width: 40px; height: 40px; min-height: 40px" :title="'Cambiar foto de perfil (' + indicacionFoto + ')'">
+                                        <img v-if="foto" :src="foto" alt="" class="w-100 h-100 object-fit-cover">
+                                        <span v-else aria-hidden="true">👤</span>
+                                        <span class="visually-hidden">Cambiar foto de perfil ({{ indicacionFoto }})</span>
+                                        <input type="file" class="visually-hidden" :accept="formatosFoto" @change="cambiarFoto">
+                                    </label>
+                                    <span class="saludoUsuario">Hola, {{ nombre }}</span>
+                                </div>
                                 <button type="button" class="btn btn-outline-light rounded-pill" @click="salir">Cerrar sesión</button>
                             </template>
                             <a v-else class="btn botonAmarillo" :class="{ active: pagina === 'login' }" href="login.html">👤 Iniciar sesión</a>

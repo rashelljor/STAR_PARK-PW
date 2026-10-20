@@ -25,7 +25,7 @@ export default {
             let tieneError = false
 
             if (!this.usuario.trim()) {
-                this.errores.usuario = 'Ingresa tu correo electrónico.'
+                this.errores.usuario = 'Ingresa tu correo o tu nombre de usuario.'
                 tieneError = true
             }
 
@@ -69,15 +69,17 @@ export default {
                     <div class="bloqueFormulario glass">
                         <form id="formLogin" novalidate @submit.prevent="enviar">
                             <div class="campo">
-                                <label class="form-label celeste" for="usuario">Correo electrónico</label>
+                                <label class="form-label celeste" for="usuario">Correo o nombre de usuario</label>
                                 <input
                                     v-model="usuario"
                                     class="form-control"
-                                    type="email"
+                                    type="text"
                                     id="usuario"
                                     name="usuario"
                                     autocomplete="username"
-                                    placeholder="abc@example.com"
+                                    autocapitalize="none"
+                                    spellcheck="false"
+                                    placeholder="abc@example.com o mariajose"
                                     required
                                 >
                                 <p class="mensajeError" role="alert">{{ errores.usuario }}</p>

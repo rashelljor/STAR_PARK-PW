@@ -18,7 +18,7 @@ export default {
     template: `
         <div class="adminLayout">
             <header class="adminBarra">
-                <button type="button" class="adminMenuBoton" id="adminMenuBoton" aria-controls="adminSidebar" aria-expanded="false" aria-label="Abrir menú del panel">☰</button>
+                <button type="button" class="adminMenuBoton" id="adminMenuBoton" aria-controls="adminSidebar" aria-expanded="false" aria-label="Mostrar u ocultar el menú del panel">☰</button>
                 <img src="../../assets/img/logostar.png" alt="Star Park" class="adminLogo">
                 <span class="adminModo" role="status" aria-label="Modo Administrador">🛠️<span class="d-none d-sm-inline"> Modo Administrador</span></span>
                 <div class="adminBarraAcciones">

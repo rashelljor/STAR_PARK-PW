@@ -5,7 +5,7 @@ import {
     signOut
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js'
 import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
-import { mensajeAuth } from '../services/authService.js'
+import { mensajeAuth, resolverCorreo } from '../services/authService.js'
 import { notificar, notificarAlCargar } from '../utils/notificaciones.js'
 
 const formulario = document.getElementById('formLogin')
@@ -28,24 +28,25 @@ formulario?.addEventListener('submit', async (evento) => {
     evento.preventDefault()
     boton.disabled = true
 
-    const correo = document.getElementById('usuario').value.trim()
+    const usuario = document.getElementById('usuario').value.trim()
     const contrasena = document.getElementById('contrasena').value
 
-    if (!correo || !contrasena) {
-        mostrarError('Ingresa tu correo y contraseña.')
+    if (!usuario || !contrasena) {
+        mostrarError('Ingresa tu correo o nombre de usuario y tu contraseña.')
         boton.disabled = false
         return
     }
 
-    if (!correo.includes('@')) {
-        mostrarError('Ingresa tu correo electrónico de administrador.')
+    const resuelto = await resolverCorreo(usuario)
+    if (!resuelto.ok) {
+        mostrarError(resuelto.mensaje)
         boton.disabled = false
         return
     }
 
     iniciandoSesion = true
     try {
-        const credencial = await signInWithEmailAndPassword(auth, correo, contrasena)
+        const credencial = await signInWithEmailAndPassword(auth, resuelto.correo, contrasena)
         if (!await esAdministrador(credencial.user)) {
             await signOut(auth)
             mostrarError('Esta cuenta no tiene permisos de administrador.')
@@ -56,7 +57,7 @@ formulario?.addEventListener('submit', async (evento) => {
     } catch (error) {
         // Las cuentas de administrador no se crean desde el sitio: sin sugerir "Crear cuenta".
         mostrarError(error.code === 'auth/invalid-credential'
-            ? 'El correo o la contraseña son incorrectos. Revisa que la contraseña respete mayúsculas y minúsculas.'
+            ? 'El usuario o la contraseña son incorrectos. Revisa que la contraseña respete mayúsculas y minúsculas.'
             : mensajeAuth(error))
     } finally {
         iniciandoSesion = false

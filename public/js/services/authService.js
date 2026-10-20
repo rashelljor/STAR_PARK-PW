@@ -8,7 +8,9 @@ import {
 import {
     doc,
     getDoc,
-    setDoc
+    setDoc,
+    updateDoc,
+    writeBatch
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
 
 function mensajeAuth(error) {
@@ -16,7 +18,7 @@ function mensajeAuth(error) {
         // Firebase (con la protección contra enumeración de correos activa) no
         // distingue si falló el correo o la contraseña, a propósito: así nadie
         // puede averiguar qué correos tienen cuenta. Por eso es un solo mensaje.
-        'auth/invalid-credential': 'El correo o la contraseña son incorrectos. Revisa que el correo esté bien escrito y que la contraseña respete mayúsculas. Si aún no tienes cuenta, créala en "Crear cuenta".',
+        'auth/invalid-credential': 'El usuario o la contraseña son incorrectos. Revisa que el correo o nombre de usuario esté bien escrito y que la contraseña respete mayúsculas. Si aún no tienes cuenta, créala en "Crear cuenta".',
         'auth/wrong-password': 'La contraseña es incorrecta. Recuerda que distingue mayúsculas y minúsculas.',
         'auth/user-not-found': 'No existe una cuenta con ese correo. Puedes crearla en "Crear cuenta".',
         'auth/email-already-in-use': 'Ya existe una cuenta con este correo electrónico.',
@@ -37,19 +39,53 @@ const CAMPO_ERROR_AUTH = {
     'auth/weak-password': 'contrasena'
 }
 
-// El login solo acepta correo (no nombre de usuario): resolver un nombre de
-// usuario a su correo requeriría leer la colección "usuarios" antes de estar
-// autenticado, y las reglas de Firestore no lo permiten (con razón: esa
-// colección tiene datos privados de cada cliente).
-export async function iniciarSesion(correoOUsuario, contrasena) {
-    const correo = correoOUsuario.trim()
+// Firebase Auth solo inicia sesión con correo. Para entrar con el nombre de
+// usuario, la colección "nombresUsuario" guarda nombre → { uid, correo }: se
+// lee un documento conociendo el nombre exacto, sin poder listar la colección
+// ni leer "usuarios" (que tiene datos privados). El id va en minúsculas, así
+// que "MariaJose" y "mariajose" son el mismo usuario.
+function claveNombreUsuario(nombreUsuario) {
+    return String(nombreUsuario || '').trim().toLowerCase()
+}
 
-    if (!correo.includes('@')) {
-        return { ok: false, mensaje: 'Inicia sesión con tu correo electrónico (el nombre de usuario no funciona aquí).' }
+async function correoDeNombreUsuario(nombreUsuario) {
+    const entrada = await getDoc(doc(db, 'nombresUsuario', claveNombreUsuario(nombreUsuario)))
+    return entrada.exists() ? entrada.data().correo : null
+}
+
+// Registra el nombre de usuario de una cuenta que no lo tiene en "nombresUsuario"
+// (cuentas creadas antes del login por nombre). Si otro ya lo usa, las reglas lo
+// rechazan y esa cuenta sigue entrando solo con su correo.
+export async function asegurarNombreUsuario(uid, perfil) {
+    const clave = claveNombreUsuario(perfil?.nombreUsuario)
+    if (!clave || !perfil.correo) return
+    const entrada = await getDoc(doc(db, 'nombresUsuario', clave))
+    if (!entrada.exists()) await setDoc(doc(db, 'nombresUsuario', clave), { uid, correo: perfil.correo })
+}
+
+// Acepta el correo o el nombre de usuario. Devuelve también el correo usado,
+// para quien necesite iniciar sesión por su cuenta (login del panel).
+export async function resolverCorreo(correoOUsuario) {
+    const texto = correoOUsuario.trim()
+    if (texto.includes('@')) return { ok: true, correo: texto }
+    try {
+        const correo = await correoDeNombreUsuario(texto)
+        return correo ? { ok: true, correo } : { ok: false, mensaje: 'No existe una cuenta con el nombre de usuario "' + texto + '". Revisa cómo lo escribiste o entra con tu correo.' }
+    } catch (error) {
+        console.error(error)
+        return { ok: false, mensaje: mensajeAuth(error) }
     }
+}
+
+export async function iniciarSesion(correoOUsuario, contrasena) {
+    const resuelto = await resolverCorreo(correoOUsuario)
+    if (!resuelto.ok) return resuelto
 
     try {
-        await signInWithEmailAndPassword(auth, correo, contrasena)
+        const credencial = await signInWithEmailAndPassword(auth, resuelto.correo, contrasena)
+        obtenerPerfil(credencial.user.uid)
+            .then(perfil => asegurarNombreUsuario(credencial.user.uid, perfil))
+            .catch(error => console.warn('No se pudo registrar el nombre de usuario:', error))
         return { ok: true }
     } catch (error) {
         return { ok: false, mensaje: mensajeAuth(error) }
@@ -57,15 +93,28 @@ export async function iniciarSesion(correoOUsuario, contrasena) {
 }
 
 export async function registrarUsuario(datos) {
+    // Se revisa antes de crear la cuenta, para no dejar una cuenta a medias.
+    try {
+        if (await correoDeNombreUsuario(datos.nombreUsuario)) {
+            return { ok: false, campo: 'nombreUsuario', mensaje: 'El nombre de usuario "' + datos.nombreUsuario + '" ya está en uso. Elige otro.' }
+        }
+    } catch (error) {
+        return { ok: false, campo: 'general', mensaje: mensajeAuth(error) }
+    }
+
     try {
         const credencial = await createUserWithEmailAndPassword(auth, datos.correo, datos.contrasena)
         const { contrasena, ...perfil } = datos
-        await setDoc(doc(db, 'usuarios', credencial.user.uid), {
+        // Perfil y nombre de usuario se guardan juntos (o ninguno).
+        const lote = writeBatch(db)
+        lote.set(doc(db, 'usuarios', credencial.user.uid), {
             ...perfil,
             uid: credencial.user.uid,
             rol: 'cliente',
             creadoEn: new Date()
         })
+        lote.set(doc(db, 'nombresUsuario', claveNombreUsuario(datos.nombreUsuario)), { uid: credencial.user.uid, correo: datos.correo })
+        await lote.commit()
         // Firebase ya deja la sesión iniciada al crear la cuenta; se mantiene
         // para que el cliente no tenga que volver a escribir sus datos.
         return { ok: true }
@@ -93,6 +142,12 @@ export function esperarUsuario() {
 export async function obtenerPerfil(uid) {
     const snapshot = await getDoc(doc(db, 'usuarios', uid))
     return snapshot.exists() ? snapshot.data() : null
+}
+
+// Foto de perfil (data URL ya recortada por imageService) del usuario con sesión.
+// Con '' se quita la foto.
+export function guardarFotoPerfil(foto) {
+    return updateDoc(doc(db, 'usuarios', auth.currentUser.uid), { foto })
 }
 
 export async function cerrarSesion() {

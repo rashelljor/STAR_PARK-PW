@@ -11,6 +11,8 @@ import { estadoAforo } from '../services/capacityService.js'
 import { coloresDe } from '../services/catalogService.js'
 import { enviarCorreo } from '../services/mailService.js'
 import { totalesCompras } from '../services/purchaseService.js'
+import { prepararImagen, indicacionImagen, formatosAceptados } from '../services/imageService.js'
+import { obtenerPerfil, asegurarNombreUsuario } from '../services/authService.js'
 
 const pagina = document.body.dataset.adminPage
 const app = document.getElementById('adminApp')
@@ -44,14 +46,32 @@ function mostrarShell() {
     activo?.classList.add('active')
     activo?.setAttribute('aria-current', 'page')
 
-    // En tablet y celular el menú lateral se abre con el botón ☰.
+    // Botón ☰: en tablet y celular abre el menú lateral encima del contenido; en
+    // computadora lo guarda o lo muestra, y el panel recuerda la elección.
     const sidebar = document.getElementById('adminSidebar')
     const botonMenu = document.getElementById('adminMenuBoton')
+    const layout = app.querySelector('.adminLayout')
+    const esCelular = window.matchMedia('(max-width: 800px)')
+    const actualizarBotonMenu = () => {
+        const visible = esCelular.matches ? sidebar.classList.contains('abierto') : !layout.classList.contains('menuGuardado')
+        const texto = (visible ? 'Ocultar' : 'Mostrar') + ' menú del panel'
+        botonMenu.setAttribute('aria-expanded', String(visible))
+        botonMenu.setAttribute('aria-label', texto)
+        botonMenu.title = texto
+    }
     const alternarMenu = abrir => {
         sidebar.classList.toggle('abierto', abrir)
-        botonMenu.setAttribute('aria-expanded', String(abrir))
+        actualizarBotonMenu()
     }
-    botonMenu.onclick = () => alternarMenu(!sidebar.classList.contains('abierto'))
+    try { layout.classList.toggle('menuGuardado', localStorage.getItem('adminMenuGuardado') === '1') } catch { /* sin almacenamiento: menú visible */ }
+    actualizarBotonMenu()
+    esCelular.addEventListener('change', actualizarBotonMenu)
+    botonMenu.onclick = () => {
+        if (esCelular.matches) return alternarMenu(!sidebar.classList.contains('abierto'))
+        const guardado = layout.classList.toggle('menuGuardado')
+        try { localStorage.setItem('adminMenuGuardado', guardado ? '1' : '0') } catch { /* la elección dura solo esta página */ }
+        actualizarBotonMenu()
+    }
     document.getElementById('adminSidebarFondo').onclick = () => alternarMenu(false)
     document.addEventListener('keydown', evento => { if (evento.key === 'Escape') alternarMenu(false) })
 
@@ -74,6 +94,50 @@ async function cerrarSesionAdmin() {
         console.error(fallo)
         notificar('No se pudo cerrar la sesión: ' + fallo.message, 'error')
     }
+}
+
+// Selector de imagen para los formularios del panel: el archivo se recorta al
+// tamaño del tipo y queda en el campo oculto "imagen", que se guarda con el resto.
+function campoImagen(tipo, etiqueta = 'Imagen') {
+    return `<span class="text-white d-block">${etiqueta}</span>
+        <div class="d-flex flex-wrap align-items-center gap-3">
+            <img data-vista-imagen alt="Vista previa" class="d-none" style="width:64px;height:48px;object-fit:cover;border-radius:6px">
+            <div class="flex-grow-1">
+                <input type="hidden" name="imagen">
+                <input class="form-control" type="file" accept="${formatosAceptados()}" data-archivo-imagen aria-label="${etiqueta}">
+                <small class="text-white-50 d-block mt-1">${indicacionImagen(tipo)}</small>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-danger d-none" data-quitar-imagen>Quitar imagen</button>
+        </div>`
+}
+
+// Activa el selector dentro del formulario. Devuelve mostrar(valor), para
+// cargar la imagen de un elemento al editarlo; reset() la deja vacía.
+function activarCampoImagen(formulario, tipo) {
+    const oculto = formulario.elements.imagen
+    const archivo = formulario.querySelector('[data-archivo-imagen]')
+    const vista = formulario.querySelector('[data-vista-imagen]')
+    const quitar = formulario.querySelector('[data-quitar-imagen]')
+    const mostrar = valor => {
+        oculto.value = valor || ''
+        vista.src = valor || ''
+        vista.classList.toggle('d-none', !valor)
+        quitar.classList.toggle('d-none', !valor)
+    }
+    archivo.addEventListener('change', async () => {
+        const elegido = archivo.files[0]
+        if (!elegido) return
+        try {
+            mostrar(await prepararImagen(elegido, tipo))
+        } catch (fallo) {
+            notificar(fallo.message, 'error')
+        }
+        archivo.value = ''
+    })
+    quitar.onclick = () => mostrar('')
+    // reset() no vacía los input hidden ni la vista previa.
+    formulario.addEventListener('reset', () => mostrar(''))
+    return mostrar
 }
 
 function botonAccion(coleccion, id, texto = 'Eliminar') {
@@ -312,12 +376,12 @@ function panelCatalogo(elemento) {
         <form id="formCatalogo" class="glass p-4 mb-4">
             <input type="hidden" name="id">
             <div class="row g-2">
-                <div class="col-md-3"><input class="form-control" name="nombre" placeholder="Nombre" required></div>
-                <div class="col-md-3"><input class="form-control" name="descripcion" placeholder="Descripción" required></div>
+                <div class="col-md-4"><input class="form-control" name="nombre" placeholder="Nombre" required></div>
+                <div class="col-md-4"><input class="form-control" name="descripcion" placeholder="Descripción" required></div>
                 <div class="col-md-2"><select class="form-select" name="categoria" aria-label="Categoría">${Object.entries(CATEGORIAS_PRODUCTO).map(([valor, texto]) => `<option value="${valor}">${texto}</option>`).join('')}</select></div>
                 <div class="col-md-2"><input class="form-control" name="precio" type="number" min="0" step="0.01" placeholder="Precio" required></div>
-                <div class="col-md-2"><input class="form-control" name="imagen" placeholder="URL de imagen"></div>
             </div>
+            <div class="mt-2">${campoImagen('producto', 'Imagen del producto')}</div>
             <div class="row g-2 mt-1 d-none" id="camposBazar">
                 <div class="col-md-3"><label class="text-white w-100">Stock (unidades)<input class="form-control" name="stock" type="number" min="0" step="1"></label></div>
                 <div class="col-md-9">
@@ -339,6 +403,7 @@ function panelCatalogo(elemento) {
         formulario.elements.stock.required = esBazar
     }
     formulario.elements.categoria.addEventListener('change', alternarBazar)
+    const mostrarImagen = activarCampoImagen(formulario, 'producto')
     // Colores: un selector por color, con ✕ para quitarlo y un botón para agregar otro.
     const listaColores = document.getElementById('listaColores')
     const dibujarColores = colores => {
@@ -384,7 +449,7 @@ function panelCatalogo(elemento) {
         try { id ? await actualizar('productos', id, datos) : await crear('productos', datos); formulario.reset(); await cargar(); notificar(id ? 'Producto actualizado.' : 'Producto agregado al catálogo.', 'exito') } catch (fallo) { console.error(fallo); notificar('No se pudo guardar el producto: ' + fallo.message, 'error') }
     })
     document.getElementById('limpiarCatalogo').onclick = () => formulario.reset()
-    tabla.addEventListener('click', async evento => { const boton = evento.target.closest('[data-delete], [data-edit]'); if (!boton) return; if (boton.dataset.delete) { if (!await confirmar('¿Eliminar este producto del catálogo?', { textoConfirmar: 'Eliminar', tipo: 'error' })) return; try { await eliminar(boton.dataset.delete, boton.dataset.id); notificar('Producto eliminado.', 'exito') } catch (fallo) { console.error(fallo); notificar('No se pudo eliminar el producto: ' + fallo.message, 'error') } } else { const producto = (await listar('productos')).find(item => item.id === boton.dataset.edit); formulario.reset(); Object.entries(producto).forEach(([clave, valor]) => { if (formulario.elements[clave]) formulario.elements[clave].value = valor }); formulario.elements.id.value = producto.id; dibujarColores(coloresDe(producto)); alternarBazar(); modoEdicion(true); formulario.scrollIntoView({ behavior: 'smooth' }) } await cargar() })
+    tabla.addEventListener('click', async evento => { const boton = evento.target.closest('[data-delete], [data-edit]'); if (!boton) return; if (boton.dataset.delete) { if (!await confirmar('¿Eliminar este producto del catálogo?', { textoConfirmar: 'Eliminar', tipo: 'error' })) return; try { await eliminar(boton.dataset.delete, boton.dataset.id); notificar('Producto eliminado.', 'exito') } catch (fallo) { console.error(fallo); notificar('No se pudo eliminar el producto: ' + fallo.message, 'error') } } else { const producto = (await listar('productos')).find(item => item.id === boton.dataset.edit); formulario.reset(); Object.entries(producto).forEach(([clave, valor]) => { if (formulario.elements[clave]) formulario.elements[clave].value = valor }); formulario.elements.id.value = producto.id; mostrarImagen(producto.imagen); dibujarColores(coloresDe(producto)); alternarBazar(); modoEdicion(true); formulario.scrollIntoView({ behavior: 'smooth' }) } await cargar() })
     cargar()
 
     const paquetes = document.createElement('section')
@@ -839,13 +904,13 @@ const CAMPOS_ATRACCION = [
     { name: 'nombre', label: 'Nombre', mayus: true },
     { name: 'etiqueta', label: 'Etiqueta (ej. INFANTIL)', mayus: true },
     { name: 'descripcion', label: 'Descripción', area: true },
-    { name: 'imagen', label: 'URL de imagen', requerido: false }
+    { name: 'imagen', label: 'Imagen de la atracción', imagen: 'atraccion' }
 ]
 
 const CAMPOS_SERVICIO = [
     { name: 'nombre', label: 'Nombre', mayus: true },
     { name: 'descripcion', label: 'Descripción (una línea por viñeta si quieres una lista)', area: true },
-    { name: 'imagen', label: 'URL de imagen', requerido: false }
+    { name: 'imagen', label: 'Imagen del servicio', imagen: 'servicio' }
 ]
 
 // Botones con roles distintos para no confundirlos:
@@ -853,6 +918,7 @@ const CAMPOS_SERVICIO = [
 //  "Añadir a la lista" / "Guardar cambios" (amarillo, sólido): guarda en Firestore.
 function seccionLista(contenedor, { coleccion, titulo, nuevo, campos, iniciales, subtitulo }) {
     const campoHtml = campo => {
+        if (campo.imagen) return `<div class="col-12">${campoImagen(campo.imagen, campo.label)}</div>`
         const atributos = `class="form-control" name="${campo.name}" ${campo.requerido === false ? '' : 'required'} ${campo.mayus ? 'data-mayus' : ''}`
         const control = campo.area ? `<textarea ${atributos} rows="3"></textarea>` : `<input ${atributos}>`
         return `<div class="col-12 col-md-6"><label class="text-white w-100">${campo.label}${control}</label></div>`
@@ -877,11 +943,14 @@ function seccionLista(contenedor, { coleccion, titulo, nuevo, campos, iniciales,
     const formulario = contenedor.querySelector('[data-form]')
     const lista = contenedor.querySelector('[data-lista]')
     let items = []
+    const campoDeImagen = campos.find(campo => campo.imagen)
+    const mostrarImagen = campoDeImagen ? activarCampoImagen(formulario, campoDeImagen.imagen) : null
 
     const abrirFormulario = item => {
         formulario.reset()
         formulario.elements.id.value = item ? item.id : ''
         if (item) campos.forEach(campo => { formulario.elements[campo.name].value = item[campo.name] || '' })
+        mostrarImagen?.(item?.imagen)
         formulario.querySelector('[data-titulo-form]').textContent = item ? 'Editando: ' + item.nombre : nuevo
         formulario.querySelector('[data-guardar]').textContent = item ? 'Guardar cambios' : 'Añadir a la lista'
         formulario.classList.remove('d-none')
@@ -1021,7 +1090,12 @@ function panelUsuarios(elemento) {
         const selector = `<select class="form-select form-select-sm" data-role="${usuario.id}" ${esPropio ? 'disabled title="No puedes cambiar tu propio rol"' : ''} aria-label="Rol de ${escapar(usuario.correo)}"><option value="admin" ${usuario.rol === 'admin' ? 'selected' : ''}>admin</option><option value="cliente" ${usuario.rol !== 'admin' ? 'selected' : ''}>cliente</option></select>`
         return `<tr><td>${escapar(usuario.nombreCompleto || usuario.nombreUsuario)}${esPropio ? ' <span class="badgeTu">tú</span>' : ''}</td><td>${escapar(usuario.correo)}</td><td>${selector}${esPropio ? '<div class="small text-white-50 mt-1">No puedes quitarte tu propio rol.</div>' : ''}</td><td>${usuario.rol === 'admin' ? '' : botonAccion('usuarios', usuario.id)}</td></tr>`
     }
-    const cargar = () => listar('usuarios').then(usuarios => { tabla.innerHTML = usuarios.map(filaUsuario).join('') }).catch(errorDeCarga)
+    let lista = []
+    const cargar = () => listar('usuarios').then(usuarios => { lista = usuarios; tabla.innerHTML = usuarios.map(filaUsuario).join('') }).catch(errorDeCarga)
+    // Las cuentas creadas antes del login por nombre de usuario aún no lo tienen
+    // registrado: se completa aquí para que todas puedan entrar con él.
+    listar('usuarios').then(usuarios => Promise.allSettled(usuarios.map(usuario => asegurarNombreUsuario(usuario.id, usuario))))
+        .catch(fallo => console.error('No se pudieron registrar los nombres de usuario:', fallo))
     // Cambiar un rol da o quita acceso al panel, así que siempre se confirma.
     tabla.addEventListener('change', async evento => {
         if (!evento.target.dataset.role) return
@@ -1040,14 +1114,36 @@ function panelUsuarios(elemento) {
         }
         cargar()
     })
-    tabla.addEventListener('click', async evento => { const boton = evento.target.closest('[data-delete]'); if (!boton || !await confirmar('¿Eliminar este perfil?', { textoConfirmar: 'Eliminar', tipo: 'error' })) return; try { await eliminar('usuarios', boton.dataset.id); notificar('Perfil eliminado.', 'exito') } catch (fallo) { console.error(fallo); notificar('No se pudo eliminar el perfil: ' + fallo.message, 'error') } cargar() })
+    tabla.addEventListener('click', async evento => { const boton = evento.target.closest('[data-delete]'); if (!boton || !await confirmar('¿Eliminar este perfil?', { textoConfirmar: 'Eliminar', tipo: 'error' })) return; try { const usuario = lista.find(item => item.id === boton.dataset.id); await eliminar('usuarios', boton.dataset.id); if (usuario?.nombreUsuario) await eliminar('nombresUsuario', usuario.nombreUsuario.trim().toLowerCase()).catch(console.error); notificar('Perfil eliminado.', 'exito') } catch (fallo) { console.error(fallo); notificar('No se pudo eliminar el perfil: ' + fallo.message, 'error') } cargar() })
     cargar()
 }
 
 function panelPerfil(elemento) {
-    elemento.innerHTML = `<h1 class="text-white">Perfil y configuración</h1><div class="glass p-4"><p class="text-white" id="correoAdmin"></p><button class="btn btn-warning" id="cerrarSesion">Cerrar sesión</button></div>`
+    elemento.innerHTML = `<h1 class="text-white">Perfil y configuración</h1>
+        <div class="glass p-4">
+            <p class="text-white" id="correoAdmin"></p>
+            <form class="formularioLista p-3 mb-3" id="formFoto">
+                ${campoImagen('perfil', 'Foto de perfil')}
+                <button class="btn btn-warning mt-3">Guardar foto</button>
+            </form>
+            <button class="btn btn-warning" id="cerrarSesion">Cerrar sesión</button>
+        </div>`
     document.getElementById('correoAdmin').textContent = auth.currentUser.email
     document.getElementById('cerrarSesion').onclick = cerrarSesionAdmin
+
+    const formulario = document.getElementById('formFoto')
+    const mostrarImagen = activarCampoImagen(formulario, 'perfil')
+    obtenerPerfil(auth.currentUser.uid).then(perfil => mostrarImagen(perfil?.foto)).catch(errorDeCarga)
+    formulario.addEventListener('submit', async evento => {
+        evento.preventDefault()
+        try {
+            await actualizar('usuarios', auth.currentUser.uid, { foto: formulario.elements.imagen.value })
+            notificar(formulario.elements.imagen.value ? 'Foto de perfil guardada.' : 'Foto de perfil quitada.', 'exito')
+        } catch (fallo) {
+            console.error(fallo)
+            notificar('No se pudo guardar la foto: ' + fallo.message, 'error')
+        }
+    })
 }
 
 // Durante un cierre de sesión voluntario, la redirección la hace el botón (con su mensaje).

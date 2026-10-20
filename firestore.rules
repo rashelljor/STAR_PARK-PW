@@ -129,12 +129,33 @@ service cloud.firestore {
       allow create, update, delete: if admin();
     }
 
+    // Login con nombre de usuario: id = nombre en minúsculas → { uid, correo }.
+    // Cualquiera lee uno sabiendo el nombre exacto (para iniciar sesión), pero
+    // solo el admin puede listarlos. Se crea una vez, a nombre de una cuenta
+    // cuyo perfil tiene ese mismo nombre y correo; nunca se modifica, y se
+    // borra solo cuando su cuenta ya no existe.
+    match /nombresUsuario/{nombre} {
+      function perfil() {
+        return getAfter(/databases/$(database)/documents/usuarios/$(request.resource.data.uid)).data;
+      }
+
+      allow get: if true;
+      allow list: if admin();
+      allow create: if request.resource.data.keys().hasOnly(['uid', 'correo'])
+        && (ownUser(request.resource.data.uid) || admin())
+        && perfil().nombreUsuario.lower() == nombre
+        && perfil().correo == request.resource.data.correo;
+      allow delete: if admin() && !exists(/databases/$(database)/documents/usuarios/$(resource.data.uid));
+    }
+
     match /usuarios/{uid} {
       allow create: if ownUser(uid) && request.resource.data.rol == 'cliente';
       allow read: if ownUser(uid) || admin();
       // El admin puede cambiar el rol de otros, pero no el suyo (evita que se
       // quede sin acceso al panel por error). Nadie cambia su propio rol.
-      allow update: if (admin() && uid != request.auth.uid) || (ownUser(uid) && request.resource.data.rol == resource.data.rol);
+      // El nombre de usuario tampoco lo cambia el propio cliente (es su login).
+      allow update: if (admin() && uid != request.auth.uid) || (ownUser(uid) && request.resource.data.rol == resource.data.rol
+        && request.resource.data.get('nombreUsuario', null) == resource.data.get('nombreUsuario', null));
       allow delete: if admin() && uid != request.auth.uid;
 
       match /carrito/{itemId} {

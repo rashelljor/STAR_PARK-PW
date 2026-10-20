@@ -12,6 +12,18 @@ export const APP_CONFIG = {
 export const AFORO_POR_DEFECTO = 120;
 export const UMBRAL_CASI_LLENO = 0.8;
 
+// Imágenes subidas desde el panel y fotos de perfil. Se guardan dentro del
+// documento de Firestore (como texto). Es el tamaño recomendado y el máximo:
+// las más grandes se reducen sin recortar; las más chicas quedan igual.
+export const TAMANOS_IMAGEN = {
+    atraccion: { ancho: 1200, alto: 800 },
+    servicio: { ancho: 1200, alto: 800 },
+    producto: { ancho: 800, alto: 800 },
+    perfil: { ancho: 400, alto: 400 }
+};
+export const PESO_MAXIMO_IMAGEN_MB = 2;
+export const FORMATOS_IMAGEN = { 'image/jpeg': 'JPG', 'image/png': 'PNG', 'image/webp': 'WEBP' };
+
 // Millas espaciales: 1 milla por cada S/ 1 pagado. Cada 100 millas canjeadas
 // descuentan S/ 5 en el siguiente pago.
 // firestore.rules repite estos valores (millasPorSol, millasPorCanje, solesPorCanje):
