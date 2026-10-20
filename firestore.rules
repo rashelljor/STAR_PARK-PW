@@ -103,9 +103,21 @@ service cloud.firestore {
           request.resource.data.stock - resource.data.stock == unidadesProducto(reserva(reservaId).items, id);
       }
 
+      // Al cancelar una reserva pagada que apartó stock (y cuya entrada no se usó),
+      // vuelven las unidades exactas de la reserva.
+      function stockCancelado() {
+        let reservaId = request.resource.data.ultimaDevolucion;
+        return soloCambia(['stock', 'ultimaDevolucion']) &&
+          reserva(reservaId).uid == request.auth.uid &&
+          reserva(reservaId).estado == 'pagado' &&
+          reserva(reservaId).get('apartado', false) == true &&
+          reservaDespues(reservaId).estado == 'cancelada' &&
+          request.resource.data.stock - resource.data.stock == unidadesProducto(reserva(reservaId).items, id);
+      }
+
       allow read: if true;
       allow create, delete: if admin();
-      allow update: if admin() || (signedIn() && (stockApartado() || stockDevuelto()));
+      allow update: if admin() || (signedIn() && (stockApartado() || stockDevuelto() || stockCancelado()));
     }
 
     match /contenido/{id} {
@@ -161,6 +173,42 @@ service cloud.firestore {
       match /carrito/{itemId} {
         allow read, write: if ownUser(uid);
       }
+
+      // Bandeja de entrada: el cliente se programa avisos propios (reembolso) y
+      // el admin le escribe (respuestas). El cliente solo las marca como leídas o las borra.
+      match /notificaciones/{id} {
+        allow read, delete: if ownUser(uid);
+        allow create: if (ownUser(uid) || admin())
+          && request.resource.data.titulo is string && request.resource.data.titulo.size() <= 100
+          && request.resource.data.mensaje is string && request.resource.data.mensaje.size() <= 2000
+          && request.resource.data.leida == false;
+        allow update: if ownUser(uid) && soloCambia(['leida']) && request.resource.data.leida is bool;
+      }
+
+      // Tarjetas guardadas: nunca el número completo ni el CVV (solo últimos 4 dígitos).
+      match /tarjetas/{id} {
+        allow read, delete: if ownUser(uid);
+        allow create, update: if ownUser(uid)
+          && request.resource.data.keys().hasOnly(['marca', 'ultimos4', 'titular', 'vencimiento', 'alias', 'creadaEn'])
+          && request.resource.data.ultimos4 is string && request.resource.data.ultimos4.matches('[0-9]{4}')
+          && request.resource.data.titular is string && request.resource.data.titular.size() <= 60
+          && request.resource.data.alias is string && request.resource.data.alias.size() <= 30
+          && request.resource.data.vencimiento.matches('[0-9]{2}/[0-9]{2}');
+      }
+    }
+
+    // Preguntas de los clientes (Mi perfil → Preguntas). Solo el admin responde.
+    match /preguntas/{id} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid', 'nombre', 'correo', 'pregunta', 'estado', 'fecha'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.estado == 'pendiente'
+        && request.resource.data.pregunta is string
+        && request.resource.data.pregunta.size() > 0
+        && request.resource.data.pregunta.size() <= 500;
+      allow read: if admin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow update: if admin();
+      allow delete: if admin() || (signedIn() && resource.data.uid == request.auth.uid);
     }
 
     // El cliente crea su reserva como pendiente y con montos coherentes: cada
@@ -286,6 +334,26 @@ service cloud.firestore {
             getAfter(/databases/$(database)/documents/cupones/$(datos.cupon)).data.get('ultimaDevolucion', '') == id));
       }
 
+      // Cancelar: solo una reserva pagada con la entrada sin usar, antes del día de
+      // la visita (medianoche de Perú, UTC-5). En la misma operación la
+      // transacción queda reembolsada (por su total) y se libera el aforo.
+      function cancelacionValida() {
+        let visita = resource.data.fecha.split('-');
+        let transaccion = /databases/$(database)/documents/transacciones/$(id);
+        return resource.data.pagado == true
+          && resource.data.estado == 'pagado'
+          && soloCambia(['estado', 'canceladaEn', 'motivoCancelacion', 'reembolso'])
+          && request.resource.data.estado == 'cancelada'
+          && request.resource.data.canceladaEn == request.time
+          && request.resource.data.motivoCancelacion is string
+          && request.resource.data.motivoCancelacion.size() > 0
+          && request.resource.data.motivoCancelacion.size() <= 100
+          && request.time < timestamp.date(int(visita[0]), int(visita[1]), int(visita[2])) + duration.value(5, 'h')
+          && getAfter(transaccion).data.estado == 'reembolsada'
+          && mismoMonto(request.resource.data.reembolso, get(transaccion).data.total)
+          && !existsAfter(/databases/$(database)/documents/ocupacion/$(id));
+      }
+
       allow create: if signedIn()
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.pagado == false
@@ -302,10 +370,11 @@ service cloud.firestore {
         && cuponValido(request.resource.data)
         && mismoMonto(request.resource.data.total, request.resource.data.subtotal - request.resource.data.descuentoCupon);
       allow read: if admin() || propia();
-      // Una reserva pagada ya no la puede editar ni eliminar el cliente (solo el admin).
+      // Una reserva pagada ya no la puede editar ni eliminar el cliente (solo el admin);
+      // solo puede cancelarla (ver cancelacionValida).
       allow update: if admin() || (propia() && resource.data.pagado != true && (
         (soloCambia(['nombre', 'correo', 'telefono', 'fecha', 'actualizadoEn']) && aforoAlDia()) || pagoValido()
-      ));
+      )) || (propia() && cancelacionValida());
       // Al quitarla se borra también su registro de aforo, para no dejar cupos ocupados.
       allow delete: if admin() || (propia() && resource.data.pagado != true
         && !existsAfter(/databases/$(database)/documents/ocupacion/$(id))
@@ -328,7 +397,7 @@ service cloud.firestore {
       allow read: if true;
       allow create, update: if admin() || (signedIn() && existsAfter(/databases/$(database)/documents/reservas/$(id)) && coincideConReserva());
       allow delete: if admin() || (signedIn() && resource.data.uid == request.auth.uid
-        && !existsAfter(/databases/$(database)/documents/reservas/$(id)));
+        && (!existsAfter(/databases/$(database)/documents/reservas/$(id)) || reservaDespues(id).estado == 'cancelada'));
     }
 
     // Transacción = comprobante de un pago aprobado. Su id es el de la reserva
@@ -352,7 +421,15 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/fidelidad/$(request.auth.uid)).data.ultimaTransaccion == id
         && mismoMonto(request.resource.data.total + request.resource.data.descuentoMillas, reserva(id).total);
       allow read: if admin() || (signedIn() && resource.data.uid == request.auth.uid);
-      allow update, delete: if admin();
+      // El cliente solo la marca como reembolsada al cancelar su reserva.
+      allow update: if admin() || (signedIn() && resource.data.uid == request.auth.uid
+        && resource.data.estado == 'aprobada'
+        && soloCambia(['estado', 'reembolsadaEn'])
+        && request.resource.data.estado == 'reembolsada'
+        && request.resource.data.reembolsadaEn == request.time
+        && reservaDespues(id).estado == 'cancelada'
+        && getAfter(/databases/$(database)/documents/fidelidad/$(request.auth.uid)).data.get('ultimoReembolso', '') == id);
+      allow delete: if admin();
     }
 
     // Contador de fidelidad de cada cliente: millas ganadas, millas usadas y
@@ -371,6 +448,18 @@ service cloud.firestore {
           pago().uid == uid;
       }
 
+      // Reembolso: la transacción pasa de aprobada a reembolsada en esta misma operación.
+      function reembolsado() {
+        return get(/databases/$(database)/documents/transacciones/$(request.resource.data.ultimoReembolso)).data;
+      }
+
+      function reembolsoNuevo() {
+        let ruta = /databases/$(database)/documents/transacciones/$(request.resource.data.ultimoReembolso);
+        return reembolsado().uid == uid &&
+          reembolsado().estado == 'aprobada' &&
+          getAfter(ruta).data.estado == 'reembolsada';
+      }
+
       allow read: if ownUser(uid) || admin();
       // Primer pago: no había saldo, así que no hay millas que canjear.
       allow create: if admin() || (ownUser(uid) && pagoNuevo()
@@ -384,7 +473,15 @@ service cloud.firestore {
         && request.resource.data.millasGanadas == resource.data.millasGanadas + pago().millasGanadas
         && request.resource.data.millasUsadas == resource.data.millasUsadas + pago().millasUsadas
         && request.resource.data.compras == resource.data.compras + 1
-        && resource.data.millasGanadas - resource.data.millasUsadas >= pago().millasUsadas);
+        && resource.data.millasGanadas - resource.data.millasUsadas >= pago().millasUsadas)
+        // Las millas ganadas con esa compra se descuentan y las canjeadas vuelven;
+        // no se puede cancelar si el saldo quedaría negativo (ya se canjearon).
+        || (ownUser(uid) && reembolsoNuevo()
+        && soloCambia(['millasGanadas', 'millasUsadas', 'compras', 'ultimoReembolso'])
+        && request.resource.data.millasGanadas == resource.data.millasGanadas - reembolsado().millasGanadas
+        && request.resource.data.millasUsadas == resource.data.millasUsadas - reembolsado().millasUsadas
+        && request.resource.data.compras == resource.data.compras - 1
+        && request.resource.data.millasGanadas >= request.resource.data.millasUsadas);
       allow delete: if admin();
     }
 

@@ -19,8 +19,14 @@ export async function obtenerFidelidad() {
     return documento.exists() ? { ...vacio, ...documento.data() } : vacio
 }
 
+// Una compra reembolsada (reserva cancelada) ya no cuenta como venta ni da millas.
+export function esReembolsada(compra) {
+    return compra.estado === 'reembolsada'
+}
+
 // Totales de un grupo de compras; el panel de admin los usa para recalcular el contador.
-export function totalesCompras(compras) {
+export function totalesCompras(todas) {
+    const compras = todas.filter(compra => !esReembolsada(compra))
     return {
         millasGanadas: compras.reduce((total, compra) => total + (compra.millasGanadas ?? Math.floor(aNumero(compra.total)) * MILLAS_POR_SOL), 0),
         millasUsadas: compras.reduce((total, compra) => total + (Number(compra.millasUsadas) || 0), 0),

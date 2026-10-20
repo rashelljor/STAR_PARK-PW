@@ -2,16 +2,20 @@
 // controller/reservas.js). Lista las reservas guardadas y permite pagarlas
 // (en la página de pago), editarlas o eliminarlas. Una reserva pagada ya no se
 // puede editar ni quitar (también lo impiden las reglas de Firestore) y muestra
-// su entrada digital con código QR.
+// su entrada digital con código QR. Hasta el día anterior a la visita, una
+// reserva pagada se puede cancelar indicando la razón: el reembolso (simulado)
+// llega a la bandeja de entrada a los 10 segundos.
 // En pantallas de 800px o menos, la tabla se muestra como tarjetas apiladas (ver reservas.css).
 
 import Header from '../components/Header.js'
 import Footer from '../components/Footer.js'
 import CalendarioAforo from '../components/CalendarioAforo.js'
 import EntradaQR from '../components/EntradaQR.js'
-import { obtenerReservas, actualizarReserva, eliminarReserva, entradasDe } from '../services/bookingService.js'
+import { obtenerReservas, actualizarReserva, eliminarReserva, entradasDe, esCancelable, cancelarReserva } from '../services/bookingService.js'
 import { cuposLibres } from '../services/capacityService.js'
 import { esperarUsuario } from '../services/authService.js'
+import { avisosNavegador, pedirAvisosNavegador } from '../services/notificationService.js'
+import { MOTIVOS_CANCELACION, SEGUNDOS_REEMBOLSO } from '../utils/constants.js'
 import { notificar, confirmar, notificarAlCargar } from '../utils/notificaciones.js'
 import { fechaLegible, formatearPrecio, milisegundos } from '../utils/formatters.js'
 import { rangoFechasReserva, erroresDatosReserva } from '../utils/validators.js'
@@ -28,6 +32,9 @@ export default {
             edicion: null,
             // Reserva pagada cuya entrada QR se está mostrando.
             entrada: null,
+            // Reserva pagada que se está cancelando: { reserva, motivo } (null = modal cerrado).
+            cancelacion: null,
+            motivos: MOTIVOS_CANCELACION,
             guardando: false,
             fechas: rangoFechasReserva()
         }
@@ -55,6 +62,7 @@ export default {
         fechaLegible,
         formatearPrecio,
         entradasDe,
+        esCancelable,
 
         // Las más recientes primero.
         async cargar() {
@@ -63,8 +71,51 @@ export default {
         },
 
         textoEstado(reserva) {
+            if (reserva.estado === 'cancelada') return '✕ Cancelada'
             if (reserva.estado === 'usada') return '✓ Entrada usada'
             return reserva.pagado ? '✓ Pagada' : 'Pendiente de pago'
+        },
+
+        claseEstado(reserva) {
+            if (reserva.estado === 'cancelada') return 'estadoCancelada'
+            return reserva.pagado ? 'estadoPagada' : 'estadoPendiente'
+        },
+
+        // Paso 1: "¿Seguro que desea cancelar?" con la razón a elegir.
+        abrirCancelacion(reserva) {
+            if (!esCancelable(reserva)) {
+                notificar('Solo puedes cancelar una reserva pagada hasta el día anterior a tu visita.', 'advertencia')
+                return
+            }
+            this.cancelacion = { reserva, motivo: '' }
+        },
+
+        cerrarCancelacion() {
+            if (!this.guardando) this.cancelacion = null
+        },
+
+        // Paso 2: cancela, avisa que el dinero vuelve en 10 segundos y, pasado ese
+        // tiempo, el aviso del reembolso llega a la campanita y a la bandeja.
+        async confirmarCancelacion() {
+            if (!this.cancelacion.motivo) {
+                notificar('Indica la razón de la cancelación.', 'advertencia')
+                return
+            }
+            // El permiso del navegador se pide durante el clic (después ya no se puede).
+            if (avisosNavegador() === 'default') pedirAvisosNavegador()
+
+            this.guardando = true
+            try {
+                await cancelarReserva(this.cancelacion.reserva, this.cancelacion.motivo)
+                this.guardando = false
+                this.cancelacion = null
+                await this.cargar()
+                notificar('Su compra fue cancelada y el dinero retornará en ' + SEGUNDOS_REEMBOLSO + ' segundos. Te avisaremos en tu bandeja de entrada 🔔.', 'exito')
+            } catch (error) {
+                console.error(error)
+                this.guardando = false
+                notificar(error.code ? 'No se pudo cancelar la reserva. Intenta nuevamente.' : error.message, 'error')
+            }
         },
 
         // El pago se hace en su propia página, con los datos de la tarjeta.
@@ -192,9 +243,12 @@ export default {
                                     </td>
                                     <td data-label="Registrada">{{ fechaLegible(reserva.fechaRegistro) }}</td>
                                     <td data-label="Estado">
-                                        <span class="estadoReserva" :class="reserva.pagado ? 'estadoPagada' : 'estadoPendiente'">
+                                        <span class="estadoReserva" :class="claseEstado(reserva)">
                                             {{ textoEstado(reserva) }}
                                         </span>
+                                        <small v-if="reserva.estado === 'cancelada'" class="d-block etiquetaGris mt-1">
+                                            {{ reserva.motivoCancelacion }} · Reembolso {{ formatearPrecio(reserva.reembolso) }}
+                                        </small>
                                     </td>
                                     <td data-label="Acciones" class="celdaAcciones">
                                         <div v-if="!reserva.pagado" class="accionesReserva">
@@ -203,7 +257,8 @@ export default {
                                             <button class="botonEliminar" @click="eliminar(reserva)">Quitar</button>
                                         </div>
                                         <div v-else class="accionesReserva">
-                                            <button class="botonEditar" @click="entrada = reserva">🎟️ Ver entrada</button>
+                                            <button v-if="reserva.estado !== 'cancelada'" class="botonEditar" @click="entrada = reserva">🎟️ Ver entrada</button>
+                                            <button v-if="esCancelable(reserva)" class="botonEliminar" @click="abrirCancelacion(reserva)">Cancelar</button>
                                             <a class="enlaceBoleta" href="miscompras.html">Ver boleta →</a>
                                         </div>
                                     </td>
@@ -224,6 +279,27 @@ export default {
                         <button type="button" class="mensajeBoton" @click="entrada = null" ref="cerrarEntrada">Cerrar</button>
                     </div>
                 </div>
+            </div>
+
+            <!-- Cancelación de una reserva pagada: confirmación con la razón. -->
+            <div v-if="cancelacion" class="mensajeFondo" @click.self="cerrarCancelacion" @keydown.esc="cerrarCancelacion">
+                <form class="mensajeCaja mensaje-error cajaFormulario" role="dialog" aria-modal="true" aria-labelledby="tituloCancelar" novalidate @submit.prevent="confirmarCancelacion">
+                    <h2 class="mensajeTitulo" id="tituloCancelar">¿Seguro que desea cancelar?</h2>
+                    <p class="etiquetaGris mb-3">
+                        Reserva del {{ cancelacion.reserva.fecha }} · {{ formatearPrecio(cancelacion.reserva.total) }}.
+                        Te devolveremos lo que pagaste a tu tarjeta. Indique la razón:
+                    </p>
+                    <fieldset class="campo">
+                        <legend class="visually-hidden">Razón de la cancelación</legend>
+                        <label v-for="motivo in motivos" :key="motivo" class="opcionRadio">
+                            <input v-model="cancelacion.motivo" type="radio" name="motivoCancelacion" :value="motivo">{{ motivo }}
+                        </label>
+                    </fieldset>
+                    <div class="mensajeAcciones">
+                        <button type="button" class="mensajeBoton mensajeBotonSecundario" @click="cerrarCancelacion" :disabled="guardando">No, volver</button>
+                        <button type="submit" class="mensajeBoton" :disabled="guardando || !cancelacion.motivo">{{ guardando ? 'Cancelando...' : 'Sí, cancelar' }}</button>
+                    </div>
+                </form>
             </div>
 
             <!-- Modal de edición: un solo formulario en lugar de cuatro ventanas emergentes. -->

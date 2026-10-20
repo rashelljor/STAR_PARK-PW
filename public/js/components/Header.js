@@ -2,12 +2,15 @@
 // Escritorio (≥ 992px): barra completa con submenús al pasar el mouse.
 // Tablet y celular: menú hamburguesa con botones grandes que se cierra al elegir una opción.
 
-import { auth, obtenerPerfil, cerrarSesion, guardarFotoPerfil } from '../services/authService.js'
-import { prepararImagen, indicacionImagen, formatosAceptados } from '../services/imageService.js'
+import { auth, obtenerPerfil, cerrarSesion } from '../services/authService.js'
+import { escucharNotificaciones, mostrarAvisoNavegador } from '../services/notificationService.js'
 import { obtenerCarrito, contarUnidades, EVENTO_CARRITO } from '../services/cartService.js'
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js'
 import { notificar, confirmar, notificarAlCargar } from '../utils/notificaciones.js'
 import { temaActual, alternarTema } from '../utils/tema.js'
+
+// Mi perfil avisa con este evento cuando cambia la foto o el nombre.
+export const EVENTO_PERFIL = 'starpark:perfil'
 
 // Secciones del inicio que se marcan en el menú según la que se está viendo.
 const SECCIONES_INICIO = ['atracciones', 'servicios', 'base-operaciones']
@@ -18,8 +21,9 @@ export default {
         return {
             nombre: '',
             foto: '',
-            indicacionFoto: indicacionImagen('perfil'),
-            formatosFoto: formatosAceptados(),
+            // Notificaciones sin leer de la bandeja (campanita).
+            noLeidas: 0,
+            reboteCampana: false,
             esAdmin: false,
             cantidadCarrito: 0,
             rebote: false,
@@ -36,8 +40,11 @@ export default {
                 this.foto = ''
                 this.esAdmin = false
                 this.cantidadCarrito = 0
+                this.noLeidas = 0
+                this.detenerNotificaciones?.()
                 return
             }
+            this.escucharBandeja(usuario.uid)
             const perfil = await obtenerPerfil(usuario.uid).catch(() => null)
             this.nombre = perfil?.nombreCompleto?.trim().split(' ')[0] || 'Astronauta'
             this.foto = perfil?.foto || ''
@@ -54,13 +61,21 @@ export default {
         }
         window.addEventListener(EVENTO_CARRITO, this.alCambiarCarrito)
 
+        this.alCambiarPerfil = evento => {
+            if ('foto' in evento.detail) this.foto = evento.detail.foto
+            if (evento.detail.nombreCompleto) this.nombre = evento.detail.nombreCompleto.trim().split(' ')[0]
+        }
+        window.addEventListener(EVENTO_PERFIL, this.alCambiarPerfil)
+
         if (this.pagina === 'inicio') this.observarSecciones()
     },
 
     unmounted() {
         this.detenerEscucha?.()
+        this.detenerNotificaciones?.()
         this.observador?.disconnect()
         window.removeEventListener(EVENTO_CARRITO, this.alCambiarCarrito)
+        window.removeEventListener(EVENTO_PERFIL, this.alCambiarPerfil)
     },
 
     methods: {
@@ -91,19 +106,21 @@ export default {
             return activo ? 'active' : ''
         },
 
-        async cambiarFoto(evento) {
-            const archivo = evento.target.files[0]
-            evento.target.value = ''
-            if (!archivo) return
-            try {
-                const imagen = await prepararImagen(archivo, 'perfil')
-                await guardarFotoPerfil(imagen)
-                this.foto = imagen
-                notificar('Foto de perfil actualizada.', 'exito')
-            } catch (error) {
-                console.error(error)
-                notificar('No se pudo guardar la foto: ' + error.message + ' (' + this.indicacionFoto + ')', 'error')
-            }
+        // Campanita: cuenta las no leídas y avisa de las que llegan mientras el
+        // cliente navega (por ejemplo, el reembolso 10 segundos después de cancelar).
+        escucharBandeja(uid) {
+            this.detenerNotificaciones?.()
+            let conocidas = null
+            this.detenerNotificaciones = escucharNotificaciones(uid, lista => {
+                this.noLeidas = lista.filter(item => !item.leida).length
+                const nuevas = conocidas ? lista.filter(item => !conocidas.has(item.id) && !item.leida) : []
+                conocidas = new Set(lista.map(item => item.id))
+                if (!nuevas.length) return
+                this.reboteCampana = false
+                requestAnimationFrame(() => { this.reboteCampana = true })
+                nuevas.forEach(item => mostrarAvisoNavegador(item.titulo, item.mensaje))
+                notificar('🔔 ' + nuevas[0].titulo + ': ' + nuevas[0].mensaje, 'info')
+            }, error => console.warn('No se pudo leer la bandeja de entrada:', error))
         },
 
         cambiarTema() {
@@ -137,6 +154,9 @@ export default {
 
                     <!-- En celular el carrito queda siempre a la vista, junto al botón del menú. -->
                     <div class="d-flex align-items-center gap-2 d-lg-none">
+                        <a v-if="nombre" class="btn btn-outline-light rounded-pill position-relative" href="perfil.html#bandeja" :aria-label="'Notificaciones, ' + noLeidas + ' sin leer'">
+                            🔔<span v-if="noLeidas" class="contadorCarrito" :class="{ rebote: reboteCampana }">{{ noLeidas }}</span>
+                        </a>
                         <a class="btn botonAmarillo botonCarrito d-inline-flex align-items-center px-3" href="carrito.html" :aria-label="'Ver mi carrito, ' + cantidadCarrito + ' productos'">
                             <img src="../../assets/img/iconcarrito.png" alt="" class="icono-boton">
                             <span v-if="cantidadCarrito" class="contadorCarrito" :class="{ rebote }">{{ cantidadCarrito }}</span>
@@ -179,6 +199,9 @@ export default {
                             <li class="nav-item">
                                 <a class="nav-link" :class="claseEnlace('miscompras')" :aria-current="pagina === 'miscompras' ? 'page' : null" href="miscompras.html">Mis Compras</a>
                             </li>
+                            <li v-if="nombre" class="nav-item">
+                                <a class="nav-link" :class="claseEnlace('perfil')" :aria-current="pagina === 'perfil' ? 'page' : null" href="perfil.html">Mi Perfil</a>
+                            </li>
                             <!-- Acceso directo al panel, solo para cuentas con rol de administrador. -->
                             <li v-if="esAdmin" class="nav-item">
                                 <a class="nav-link celeste" href="../admin/control.html">⚙️ Panel admin</a>
@@ -195,19 +218,21 @@ export default {
                                 <span v-if="cantidadCarrito" class="contadorCarrito" :class="{ rebote }" :aria-label="cantidadCarrito + ' productos'">{{ cantidadCarrito }}</span>
                             </a>
 
-                            <!-- Con sesión: foto + saludo + cerrar sesión. Sin sesión: enlace a login.
-                                 La foto se cambia tocándola; se muestra en círculo, recortada al centro. -->
+                            <!-- Con sesión: campanita + foto y saludo (llevan a Mi perfil) + cerrar sesión.
+                                 Sin sesión: enlace a login. En celular la campanita está junto al carrito. -->
                             <template v-if="nombre">
-                                <div class="d-flex align-items-center gap-2">
-                                    <label class="btn btn-outline-light rounded-circle p-0 d-inline-flex align-items-center justify-content-center overflow-hidden flex-shrink-0"
-                                        style="width: 40px; height: 40px; min-height: 40px" :title="'Cambiar foto de perfil (' + indicacionFoto + ')'">
+                                <a class="btn btn-outline-light rounded-pill position-relative d-none d-lg-inline-flex" href="perfil.html#bandeja"
+                                    :aria-label="'Notificaciones, ' + noLeidas + ' sin leer'" title="Bandeja de entrada">
+                                    🔔<span v-if="noLeidas" class="contadorCarrito" :class="{ rebote: reboteCampana }">{{ noLeidas }}</span>
+                                </a>
+                                <a class="d-flex align-items-center gap-2 text-decoration-none" href="perfil.html" :aria-current="pagina === 'perfil' ? 'page' : null" title="Ver mi perfil">
+                                    <span class="btn btn-outline-light rounded-circle p-0 d-inline-flex align-items-center justify-content-center overflow-hidden flex-shrink-0"
+                                        style="width: 40px; height: 40px; min-height: 40px" aria-hidden="true">
                                         <img v-if="foto" :src="foto" alt="" class="w-100 h-100 object-fit-cover">
-                                        <span v-else aria-hidden="true">👤</span>
-                                        <span class="visually-hidden">Cambiar foto de perfil ({{ indicacionFoto }})</span>
-                                        <input type="file" class="visually-hidden" :accept="formatosFoto" @change="cambiarFoto">
-                                    </label>
-                                    <span class="saludoUsuario">Hola, {{ nombre }}</span>
-                                </div>
+                                        <span v-else>👤</span>
+                                    </span>
+                                    <span class="saludoUsuario">Hola, {{ nombre }}<span class="visually-hidden">. Ver mi perfil</span></span>
+                                </a>
                                 <button type="button" class="btn btn-outline-light rounded-pill" @click="salir">Cerrar sesión</button>
                             </template>
                             <a v-else class="btn botonAmarillo" :class="{ active: pagina === 'login' }" href="login.html">👤 Iniciar sesión</a>

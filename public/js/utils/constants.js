@@ -76,3 +76,27 @@ export const CONDICIONES_CUPON = {
     masDeTresJuegos: 'Más de 3 juegos en el carrito',
     clienteFrecuente: 'Cliente frecuente (3+ compras)'
 };
+
+// Regiones que el cliente elige al registrarse (y puede cambiar en Mi perfil).
+export const REGIONES = ['Arequipa', 'Huancayo', 'Lima', 'Chimbote'];
+export const TIPOS_DOCUMENTO = ['DNI', 'Carnet de extranjería', 'Pasaporte'];
+
+// Cancelación de una reserva pagada (solo antes del día de la visita).
+// El reembolso simulado llega a la bandeja de entrada tras estos segundos.
+export const MOTIVOS_CANCELACION = [
+    'Cambio de planes',
+    'Problemas de salud',
+    'Mal clima o transporte',
+    'Me equivoqué de fecha',
+    'Encontré otra opción'
+];
+export const SEGUNDOS_REEMBOLSO = 10;
+
+// Preguntas frecuentes de Mi perfil → Preguntas.
+export const PREGUNTAS_FRECUENTES = [
+    { pregunta: '¿Puedo cancelar una reserva pagada?', respuesta: 'Sí, desde Mis Reservas, hasta el día anterior a tu visita. El dinero vuelve a la tarjeta con la que pagaste y te avisamos en tu bandeja de entrada.' },
+    { pregunta: '¿Puedo cambiar la fecha de mi visita?', respuesta: 'Mientras la reserva no esté pagada puedes editarla en Mis Reservas. Si ya la pagaste, cancélala y vuelve a reservar.' },
+    { pregunta: '¿Cómo uso mi entrada?', respuesta: 'En Mis Reservas toca "Ver entrada" y muestra el código QR en la puerta el día de tu visita.' },
+    { pregunta: '¿Qué son las millas espaciales?', respuesta: 'Ganas 1 milla por cada S/ 1 pagado. Cada 100 millas valen S/ 5 de descuento al pagar una reserva.' },
+    { pregunta: '¿Mis tarjetas guardadas están seguras?', respuesta: 'Solo guardamos la marca, los últimos 4 dígitos, el titular y el vencimiento. Nunca el número completo ni el CVV.' }
+];

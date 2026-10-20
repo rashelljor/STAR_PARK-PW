@@ -76,6 +76,7 @@ main {
 
 .estadoPagada { background: rgba(61, 220, 151, 0.15); color: var(--verde); border: 1px solid var(--verde); }
 .estadoPendiente { background: rgba(255, 214, 10, 0.12); color: var(--amarillo); border: 1px solid var(--amarillo); }
+.estadoCancelada { background: rgba(255, 92, 122, 0.12); color: var(--rojo); border: 1px solid var(--rojo); }
 
 .accionesReserva {
     display: flex;

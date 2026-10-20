@@ -83,12 +83,44 @@ export async function iniciarSesion(correoOUsuario, contrasena) {
 
     try {
         const credencial = await signInWithEmailAndPassword(auth, resuelto.correo, contrasena)
-        obtenerPerfil(credencial.user.uid)
-            .then(perfil => asegurarNombreUsuario(credencial.user.uid, perfil))
+        const perfil = await obtenerPerfil(credencial.user.uid)
+        // El admin eliminó el perfil, pero la cuenta de acceso (Authentication) sigue.
+        if (!perfil) {
+            await signOut(auth)
+            return { ok: false, mensaje: 'El perfil de esta cuenta fue eliminado. Para volver a usarla, regístrate en "Crear cuenta" con este mismo correo y tu contraseña de siempre.' }
+        }
+        asegurarNombreUsuario(credencial.user.uid, perfil)
             .catch(error => console.warn('No se pudo registrar el nombre de usuario:', error))
         return { ok: true }
     } catch (error) {
         return { ok: false, mensaje: mensajeAuth(error) }
+    }
+}
+
+// Perfil y nombre de usuario se guardan juntos (o ninguno).
+function guardarPerfilNuevo(uid, datos) {
+    const { contrasena, ...perfil } = datos
+    const lote = writeBatch(db)
+    lote.set(doc(db, 'usuarios', uid), { ...perfil, uid, rol: 'cliente', creadoEn: new Date() })
+    lote.set(doc(db, 'nombresUsuario', claveNombreUsuario(datos.nombreUsuario)), { uid, correo: datos.correo })
+    return lote.commit()
+}
+
+// El panel admin solo puede borrar el perfil (Firestore): la cuenta de acceso
+// de Authentication no se borra desde el navegador. Si el correo ya está en uso
+// y la contraseña es la de esa cuenta sin perfil, se le vuelve a crear el perfil.
+async function recuperarCuentaSinPerfil(datos) {
+    try {
+        const credencial = await signInWithEmailAndPassword(auth, datos.correo, datos.contrasena)
+        if (await obtenerPerfil(credencial.user.uid)) {
+            await signOut(auth)
+            return false
+        }
+        await guardarPerfilNuevo(credencial.user.uid, datos)
+        return true
+    } catch {
+        if (auth.currentUser) await signOut(auth).catch(() => {})
+        return false
     }
 }
 
@@ -104,21 +136,12 @@ export async function registrarUsuario(datos) {
 
     try {
         const credencial = await createUserWithEmailAndPassword(auth, datos.correo, datos.contrasena)
-        const { contrasena, ...perfil } = datos
-        // Perfil y nombre de usuario se guardan juntos (o ninguno).
-        const lote = writeBatch(db)
-        lote.set(doc(db, 'usuarios', credencial.user.uid), {
-            ...perfil,
-            uid: credencial.user.uid,
-            rol: 'cliente',
-            creadoEn: new Date()
-        })
-        lote.set(doc(db, 'nombresUsuario', claveNombreUsuario(datos.nombreUsuario)), { uid: credencial.user.uid, correo: datos.correo })
-        await lote.commit()
+        await guardarPerfilNuevo(credencial.user.uid, datos)
         // Firebase ya deja la sesión iniciada al crear la cuenta; se mantiene
         // para que el cliente no tenga que volver a escribir sus datos.
         return { ok: true }
     } catch (error) {
+        if (error.code === 'auth/email-already-in-use' && await recuperarCuentaSinPerfil(datos)) return { ok: true, recuperada: true }
         return { ok: false, codigo: error.code, campo: CAMPO_ERROR_AUTH[error.code] || 'general', mensaje: mensajeAuth(error) }
     }
 }

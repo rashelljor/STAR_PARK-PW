@@ -10,9 +10,10 @@ import { AFORO_POR_DEFECTO, CONDICIONES_CUPON, CUPONES_INICIALES, PAQUETES_EVENT
 import { estadoAforo } from '../services/capacityService.js'
 import { coloresDe } from '../services/catalogService.js'
 import { enviarCorreo } from '../services/mailService.js'
-import { totalesCompras } from '../services/purchaseService.js'
+import { totalesCompras, esReembolsada } from '../services/purchaseService.js'
 import { prepararImagen, indicacionImagen, formatosAceptados } from '../services/imageService.js'
 import { obtenerPerfil, asegurarNombreUsuario } from '../services/authService.js'
+import { enviarNotificacion } from '../services/notificationService.js'
 
 const pagina = document.body.dataset.adminPage
 const app = document.getElementById('adminApp')
@@ -149,7 +150,11 @@ const KPIS = [
     { id: 'Reservas', icono: '🎟️', titulo: 'Reservas', color: 'celeste' },
     { id: 'Ventas', icono: '💳', titulo: 'Ventas', color: 'verde' },
     { id: 'Clientes', icono: '👥', titulo: 'Clientes', color: 'violeta' },
-    { id: 'Productos', icono: '🛒', titulo: 'Productos', color: 'amarillo' }
+    { id: 'Productos', icono: '🛒', titulo: 'Productos', color: 'amarillo' },
+    { id: 'Cumpleanos', icono: '🎂', titulo: 'Cumpleaños', color: 'amarillo' },
+    { id: 'Canceladas', icono: '↩️', titulo: 'Ventas canceladas', color: 'rojo' },
+    { id: 'Usadas', icono: '✅', titulo: 'Entradas usadas', color: 'verde' },
+    { id: 'Preguntas', icono: '❓', titulo: 'Preguntas', color: 'celeste' }
 ]
 
 // Fecha local AAAA-MM-DD (toISOString usa UTC y en Perú adelanta el día desde las 7 p. m.).
@@ -223,7 +228,7 @@ function panelControl(elemento) {
         <p class="text-white-50">Resumen operativo de Star Park</p>
         <div class="kpiGrilla">
             ${KPIS.map(kpi => `
-                <article class="kpiTarjeta kpi-${kpi.color}">
+                <article class="kpiTarjeta kpi-${kpi.color}"${kpi.color === 'rojo' ? ' style="--kpi: var(--rojo)"' : ''}>
                     <span class="kpiIcono" aria-hidden="true">${kpi.icono}</span>
                     <div>
                         <h2 class="kpiTitulo">${kpi.titulo}</h2>
@@ -238,7 +243,7 @@ function panelControl(elemento) {
         </div>
         <div class="row g-4 mt-0">
             <div class="col-12 col-xl-8"><div class="glass p-4 h-100"><h2 class="h4 text-white">Ingresos de los últimos 14 días</h2><canvas id="graficoVentas" height="120" role="img" aria-label="Gráfico de ingresos por día"></canvas></div></div>
-            <div class="col-12 col-xl-4"><div class="glass p-4 h-100"><h2 class="h4 text-white">Reservas por estado</h2><canvas id="graficoEstados" role="img" aria-label="Gráfico de reservas pagadas, pendientes y usadas"></canvas></div></div>
+            <div class="col-12 col-xl-4"><div class="glass p-4 h-100"><h2 class="h4 text-white">Reservas por estado</h2><canvas id="graficoEstados" role="img" aria-label="Gráfico de reservas pagadas, pendientes, usadas y canceladas"></canvas></div></div>
             <div class="col-12 col-xl-6"><div class="glass p-4 h-100"><h2 class="h4 text-white">Productos más vendidos</h2><canvas id="graficoProductos" height="160" role="img" aria-label="Gráfico de productos más vendidos"></canvas></div></div>
             <div class="col-12 col-xl-6"><div class="glass p-4 h-100"><h2 class="h4 text-white">Aforo de los próximos 14 días</h2><canvas id="graficoAforo" height="160" role="img" aria-label="Gráfico de ocupación por día"></canvas></div></div>
         </div>
@@ -269,8 +274,11 @@ function panelControl(elemento) {
         }
     })
 
-    Promise.all([listar('reservas'), listar('transacciones'), listar('usuarios'), listar('productos'), listar('ocupacion'), listar('eventos'), obtenerDocumento('configuracion', 'aforo')])
-        .then(([reservas, ventas, usuarios, productos, ocupacion, eventos, configAforo]) => {
+    Promise.all([listar('reservas'), listar('transacciones'), listar('usuarios'), listar('productos'), listar('ocupacion'), listar('eventos'), obtenerDocumento('configuracion', 'aforo'), listar('preguntas', 'fecha')])
+        .then(([reservas, transacciones, usuarios, productos, ocupacion, eventos, configAforo, preguntas]) => {
+            // Las ventas reembolsadas (reservas canceladas) no cuentan como ingreso.
+            const ventas = transacciones.filter(venta => !esReembolsada(venta))
+            const reembolsadas = transacciones.filter(esReembolsada)
             const pendientes = reservas.filter(reserva => !reserva.pagado).length
             const ingresos = ventas.reduce((suma, venta) => suma + aNumero(venta.total), 0)
             const clientes = usuarios.filter(usuario => usuario.rol !== 'admin').length
@@ -278,12 +286,18 @@ function panelControl(elemento) {
             const aforo = Number(configAforo?.maximoPorDia) || AFORO_POR_DEFECTO
             formAforo.elements.maximoPorDia.value = aforo
 
-            sincronizarFidelidad(ventas).catch(fallo => console.error('No se pudo sincronizar la fidelidad:', fallo))
+            sincronizarFidelidad(transacciones).catch(fallo => console.error('No se pudo sincronizar la fidelidad:', fallo))
 
             escribir('Reservas', reservas.length, pendientes + (pendientes === 1 ? ' pendiente de pago' : ' pendientes de pago'))
             escribir('Ventas', ventas.length, formatearPrecio(ingresos) + ' en ingresos')
             escribir('Clientes', clientes, (usuarios.length - clientes) + ' administradores')
             escribir('Productos', productos.length, promociones + ' promociones activas')
+            const eventosPor = estado => eventos.filter(item => item.estado === estado).length
+            escribir('Cumpleanos', eventos.length, eventosPor('pendiente') + ' pendientes · ' + eventosPor('confirmado') + ' confirmados · ' + eventosPor('rechazado') + ' rechazados')
+            escribir('Canceladas', reembolsadas.length, formatearPrecio(reembolsadas.reduce((suma, venta) => suma + aNumero(venta.total), 0)) + ' reembolsados')
+            escribir('Usadas', reservas.filter(reserva => reserva.estado === 'usada').length, 'validadas en la puerta')
+            const preguntasPendientes = preguntas.filter(item => item.estado !== 'respondida').length
+            escribir('Preguntas', preguntasPendientes, 'sin responder · ' + preguntas.length + ' recibidas en total')
 
             // Próximos 14 días: ocupación por fecha.
             const dias = Array.from({ length: 14 }, (_, i) => { const fecha = new Date(); fecha.setDate(fecha.getDate() + i); return fechaLocal(fecha) })
@@ -301,6 +315,7 @@ function panelControl(elemento) {
             const eventosPendientes = eventos.filter(item => item.estado === 'pendiente').length
             if (eventosPendientes) alertas.push(`🎂 ${eventosPendientes} ${eventosPendientes === 1 ? 'solicitud de evento espera' : 'solicitudes de evento esperan'} confirmación. <a class="link-warning" href="gestion_reservas_ventas.html#eventos">Revisar</a>`)
             const sinPagarHoy = reservas.filter(reserva => !reserva.pagado && reserva.fecha === hoy).length
+            if (preguntasPendientes) alertas.push(`❓ ${preguntasPendientes} ${preguntasPendientes === 1 ? 'pregunta de cliente espera' : 'preguntas de clientes esperan'} respuesta. <a class="link-warning" href="usuario.html#preguntas">Responder</a>`)
             if (sinPagarHoy) alertas.push(`💳 ${sinPagarHoy} ${sinPagarHoy === 1 ? 'reserva para hoy sigue' : 'reservas para hoy siguen'} sin pagar.`)
             document.getElementById('alertasPanel').innerHTML = alertas.length ? alertas.map(texto => `<li class="text-white">${texto}</li>`).join('') : '<li class="text-white">✅ Todo en orden: sin alertas para los próximos 14 días.</li>'
 
@@ -331,11 +346,17 @@ async function dibujarGraficos({ reservas, ventas, dias, ocupadasPorDia, aforo }
         options: { plugins: { legend: { display: false }, tooltip: etiquetaSoles }, scales: { y: { beginAtZero: true, ticks: { callback: valor => 'S/ ' + valor } } } }
     })
 
-    const usadas = reservas.filter(reserva => reserva.estado === 'usada').length
-    const pagadas = reservas.filter(reserva => reserva.pagado).length - usadas
+    const contar = condicion => reservas.filter(condicion).length
     new Chart(document.getElementById('graficoEstados'), {
         type: 'doughnut',
-        data: { labels: ['Pagadas', 'Pendientes', 'Entrada usada'], datasets: [{ data: [pagadas, reservas.length - pagadas - usadas, usadas], backgroundColor: [verde, amarillo, azul], borderColor: colorCss('--superficie') }] },
+        data: {
+            labels: ['Pagadas', 'Pendientes', 'Entrada usada', 'Canceladas'],
+            datasets: [{
+                data: [contar(reserva => reserva.estado === 'pagado'), contar(reserva => !reserva.pagado), contar(reserva => reserva.estado === 'usada'), contar(reserva => reserva.estado === 'cancelada')],
+                backgroundColor: [verde, amarillo, azul, rojo],
+                borderColor: colorCss('--superficie')
+            }]
+        },
         options: { plugins: { legend: { position: 'bottom' } } }
     })
 
@@ -720,48 +741,92 @@ function panelReservas(elemento) {
 
         <section class="glass p-4 mb-4">
             <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
-                <h2 class="h4 text-white m-0">Reservas</h2>
-                <select class="form-select w-auto" id="filtroReservas" aria-label="Filtrar reservas por estado">
+                <h2 class="h4 text-white m-0">⏳ Pendientes de pago y canceladas</h2>
+                <select class="form-select w-auto" id="filtroPendientes" aria-label="Filtrar pendientes y canceladas">
                     <option value="">Todas</option>
                     <option value="pendiente">Pendientes de pago</option>
-                    <option value="pagado">Pagadas</option>
+                    <option value="cancelada">Canceladas</option>
+                </select>
+            </div>
+            <p class="text-white-50 mb-2" id="resumenPendientes"></p>
+            <p class="text-white-50 small">Las más recientes primero. Si el cliente quita una reserva sin pagar, se borra; las canceladas son reservas pagadas que el cliente canceló antes de su visita (con reembolso).</p>
+            <div class="table-responsive"><table class="table table-dark"><thead><tr><th>Registrada</th><th>Código</th><th>Cliente</th><th>Correo</th><th>Visita</th><th>Entradas</th><th>Total</th><th>Estado</th></tr></thead><tbody id="tablaPendientes"><tr><td colspan="8">Cargando...</td></tr></tbody></table></div>
+        </section>
+
+        <section class="glass p-4 mb-4">
+            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
+                <h2 class="h4 text-white m-0">✅ Reservas pagadas <span class="badgeTu align-middle" id="cantidadPagadas"></span></h2>
+                <select class="form-select w-auto" id="filtroPagadas" aria-label="Filtrar reservas pagadas">
+                    <option value="">Todas las pagadas</option>
+                    <option value="pagado">Pagadas, sin usar</option>
                     <option value="usada">Entrada usada</option>
                 </select>
             </div>
-            <div class="table-responsive"><table class="table table-dark"><thead><tr><th>Código</th><th>Cliente</th><th>Correo</th><th>Visita</th><th>Entradas</th><th>Total</th><th>Estado</th><th>Pago</th></tr></thead><tbody id="tablaReservas"><tr><td colspan="8">Cargando...</td></tr></tbody></table></div>
+            <p class="text-white-50" id="resumenPagadas">Las más recientes primero.</p>
+            <div class="table-responsive"><table class="table table-dark"><thead><tr><th>Registrada</th><th>Código</th><th>Cliente</th><th>Correo</th><th>Visita</th><th>Entradas</th><th>Total</th><th>Estado</th><th>Pago</th></tr></thead><tbody id="tablaPagadas"><tr><td colspan="9">Cargando...</td></tr></tbody></table></div>
         </section>
 
         <section class="glass p-4" id="eventos">
-            <h2 class="h4 text-white">🎂 Solicitudes de cumpleaños y eventos</h2>
+            <h2 class="h4 text-white">🎂 Solicitudes de cumpleaños y eventos <span class="badgeTu align-middle" id="cantidadEventos"></span></h2>
+            <p class="text-white-50" id="resumenEventos"></p>
             <div class="table-responsive"><table class="table table-dark"><thead><tr><th>Evento</th><th>Fecha</th><th>Niños</th><th>Paquete</th><th>Contacto</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tablaEventos"><tr><td colspan="7">Cargando...</td></tr></tbody></table></div>
         </section>`
 
     let reservas = []
     let transacciones = []
-    const tabla = document.getElementById('tablaReservas')
-    const filtro = document.getElementById('filtroReservas')
+    const tablaPendientes = document.getElementById('tablaPendientes')
+    const tablaPagadas = document.getElementById('tablaPagadas')
+    const filtro = document.getElementById('filtroPagadas')
+    const filtroPendientes = document.getElementById('filtroPendientes')
     const resultado = document.getElementById('resultadoValidacion')
 
     const codigoDe = id => id.slice(-8).toUpperCase()
+    // Orden de registro (fechaRegistro), la más reciente primero. Las reservas
+    // antiguas sin esa fecha van al final.
+    const registroDe = reserva => reserva.fechaRegistro?.toMillis?.() || 0
+    const porRegistro = (a, b) => registroDe(b) - registroDe(a)
+    const celdasComunes = reserva => `
+        <td class="text-nowrap">${reserva.fechaRegistro ? escapar(fechaLegible(reserva.fechaRegistro)) : '—'}</td>
+        <td><code>${codigoDe(reserva.id)}</code></td>
+        <td>${escapar(reserva.nombre)}</td>
+        <td>${escapar(reserva.correo)}</td>
+        <td>${escapar(reserva.fecha)}</td>
+        <td>${reserva.entradas || (reserva.items || []).length}</td>
+        <td>${formatearPrecio(reserva.total)}${reserva.cupon ? `<div class="small text-white-50">Cupón ${escapar(reserva.cupon)}</div>` : ''}</td>`
+
+    const plural = (cantidad, singular, varias) => cantidad + ' ' + (cantidad === 1 ? singular : varias)
     const dibujarReservas = () => {
-        const visibles = reservas
-            .filter(reserva => !filtro.value || (reserva.estado || 'pendiente') === filtro.value)
-            .sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)))
-        tabla.innerHTML = visibles.length ? visibles.map(reserva => {
+        const canceladas = reservas.filter(reserva => reserva.estado === 'cancelada')
+        const sinPagar = reservas.filter(reserva => !reserva.pagado)
+        const pendientes = [...sinPagar, ...canceladas]
+            .filter(reserva => !filtroPendientes.value || (filtroPendientes.value === 'cancelada') === (reserva.estado === 'cancelada'))
+            .sort(porRegistro)
+        const pagadas = reservas.filter(reserva => reserva.pagado && reserva.estado !== 'cancelada').sort(porRegistro)
+        const visibles = pagadas.filter(reserva => !filtro.value || reserva.estado === filtro.value)
+        const reembolsado = canceladas.reduce((suma, reserva) => suma + aNumero(reserva.reembolso), 0)
+        const porCobrar = sinPagar.reduce((suma, reserva) => suma + aNumero(reserva.total), 0)
+        const usadas = pagadas.filter(reserva => reserva.estado === 'usada').length
+        document.getElementById('resumenPendientes').innerHTML = `<strong class="text-warning">${plural(sinPagar.length, 'pendiente de pago', 'pendientes de pago')}</strong> (${formatearPrecio(porCobrar)} por cobrar) · <strong class="text-danger">${plural(canceladas.length, 'cancelada', 'canceladas')}</strong> (${formatearPrecio(reembolsado)} reembolsados)`
+        document.getElementById('cantidadPagadas').textContent = pagadas.length
+        document.getElementById('resumenPagadas').textContent = plural(pagadas.length - usadas, 'pagada sin usar', 'pagadas sin usar') + ' · ' + plural(usadas, 'entrada usada', 'entradas usadas') + '. Las más recientes primero.'
+
+        tablaPendientes.innerHTML = pendientes.length
+            ? pendientes.map(reserva => `<tr>${celdasComunes(reserva)}
+                <td>${reserva.estado === 'cancelada'
+                    ? `<span class="text-danger">Cancelada</span><div class="small text-white-50">${escapar(reserva.motivoCancelacion || '')}${reserva.canceladaEn ? ' · ' + escapar(fechaLegible(reserva.canceladaEn)) : ''}<br>Reembolso ${formatearPrecio(reserva.reembolso)}</div>`
+                    : 'Pendiente de pago'}</td></tr>`).join('')
+            : '<tr><td colspan="8">No hay reservas con este filtro.</td></tr>'
+
+        tablaPagadas.innerHTML = visibles.length ? visibles.map(reserva => {
             const pago = transacciones.find(item => item.reservaId === reserva.id)
-            return `<tr>
-                <td><code>${codigoDe(reserva.id)}</code></td>
-                <td>${escapar(reserva.nombre)}</td>
-                <td>${escapar(reserva.correo)}</td>
-                <td>${escapar(reserva.fecha)}</td>
-                <td>${reserva.entradas || (reserva.items || []).length}</td>
-                <td>${formatearPrecio(reserva.total)}${reserva.cupon ? `<div class="small text-white-50">Cupón ${escapar(reserva.cupon)}</div>` : ''}</td>
-                <td>${escapar(ESTADOS_RESERVA[reserva.estado] || reserva.estado || 'Pendiente de pago')}${reserva.usadaEn ? `<div class="small text-white-50">${escapar(fechaLegible(reserva.usadaEn))}</div>` : ''}</td>
+            return `<tr>${celdasComunes(reserva)}
+                <td>${escapar(ESTADOS_RESERVA[reserva.estado] || reserva.estado)}${reserva.usadaEn ? `<div class="small text-white-50">${escapar(fechaLegible(reserva.usadaEn))}</div>` : ''}</td>
                 <td>${pago ? `${escapar(pago.tarjeta ? pago.tarjeta.marca + ' •••• ' + pago.tarjeta.ultimos4 : 'Validada')}${pago.codigoAutorizacion ? `<div class="small text-white-50">Aut. ${escapar(pago.codigoAutorizacion)}</div>` : ''}` : '—'}</td>
             </tr>`
-        }).join('') : '<tr><td colspan="8">No hay reservas con este filtro.</td></tr>'
+        }).join('') : '<tr><td colspan="9">No hay reservas pagadas con este filtro.</td></tr>'
     }
     filtro.onchange = dibujarReservas
+    filtroPendientes.onchange = dibujarReservas
 
     const cargarReservas = () => Promise.all([listar('reservas'), listar('transacciones')]).then(([lista, pagos]) => {
         reservas = lista
@@ -786,6 +851,7 @@ function panelReservas(elemento) {
             if (!reserva) return mostrarResultado('error', '✕ Entrada no encontrada', `No existe una reserva con el código <strong>${escapar(limpio)}</strong>.`)
 
             const datos = `<strong>${escapar(reserva.nombre)}</strong> · ${reserva.entradas || (reserva.items || []).length} entrada(s) · visita ${escapar(reserva.fecha)} · código ${codigoDe(reserva.id)}`
+            if (reserva.estado === 'cancelada') return mostrarResultado('error', '✕ Entrada cancelada', datos + '<br>El cliente canceló esta reserva' + (reserva.canceladaEn ? ' el ' + escapar(fechaLegible(reserva.canceladaEn)) : '') + ' y se le reembolsó el pago.')
             if (!reserva.pagado) return mostrarResultado('error', '✕ Entrada no pagada', datos + '<br>La reserva sigue pendiente de pago.')
             if (reserva.estado === 'usada') return mostrarResultado('advertencia', '! Entrada ya usada', datos + '<br>Se usó el ' + escapar(fechaLegible(reserva.usadaEn)) + '.')
 
@@ -848,6 +914,9 @@ function panelReservas(elemento) {
     let eventos = []
     const cargarEventos = () => listar('eventos', 'fecha').then(lista => {
         eventos = lista
+        const porEstado = estado => lista.filter(item => item.estado === estado).length
+        document.getElementById('cantidadEventos').textContent = lista.length
+        document.getElementById('resumenEventos').innerHTML = `<strong class="text-warning">${porEstado('pendiente')} pendientes</strong> · <strong class="text-success">${porEstado('confirmado')} confirmados</strong> · ${porEstado('rechazado')} rechazados · ${lista.reduce((suma, item) => suma + (Number(item.ninos) || 0), 0)} niños en total`
         tablaEventos.innerHTML = lista.length ? lista.map(evento => `<tr>
             <td><strong>${escapar(evento.cumpleanero)}</strong>${evento.edad ? ` (${escapar(evento.edad)} años)` : ''}${evento.comentarios ? `<div class="small text-white-50">${escapar(evento.comentarios)}</div>` : ''}</td>
             <td>${escapar(evento.fecha)} ${escapar(evento.hora)}</td>
@@ -1114,7 +1183,75 @@ function panelUsuarios(elemento) {
         }
         cargar()
     })
-    tabla.addEventListener('click', async evento => { const boton = evento.target.closest('[data-delete]'); if (!boton || !await confirmar('¿Eliminar este perfil?', { textoConfirmar: 'Eliminar', tipo: 'error' })) return; try { const usuario = lista.find(item => item.id === boton.dataset.id); await eliminar('usuarios', boton.dataset.id); if (usuario?.nombreUsuario) await eliminar('nombresUsuario', usuario.nombreUsuario.trim().toLowerCase()).catch(console.error); notificar('Perfil eliminado.', 'exito') } catch (fallo) { console.error(fallo); notificar('No se pudo eliminar el perfil: ' + fallo.message, 'error') } cargar() })
+    tabla.addEventListener('click', async evento => { const boton = evento.target.closest('[data-delete]'); if (!boton || !await confirmar('¿Eliminar este perfil? Se borran sus datos personales, pero no su acceso (correo y contraseña): si vuelve a registrarse con el mismo correo y su contraseña, recupera la cuenta. Para borrar también el acceso, elimínalo en Firebase Console → Authentication.', { textoConfirmar: 'Eliminar', tipo: 'error' })) return; try { const usuario = lista.find(item => item.id === boton.dataset.id); await eliminar('usuarios', boton.dataset.id); if (usuario?.nombreUsuario) await eliminar('nombresUsuario', usuario.nombreUsuario.trim().toLowerCase()).catch(console.error); notificar('Perfil eliminado.', 'exito') } catch (fallo) { console.error(fallo); notificar('No se pudo eliminar el perfil: ' + fallo.message, 'error') } cargar() })
+    cargar()
+
+    const preguntas = document.createElement('section')
+    preguntas.className = 'glass p-4 mt-4'
+    preguntas.id = 'preguntas'
+    elemento.appendChild(preguntas)
+    seccionPreguntas(preguntas)
+    if (window.location.hash === '#preguntas') preguntas.scrollIntoView()
+}
+
+// Preguntas que los clientes envían desde Mi perfil. Al responder, la respuesta
+// queda en la pregunta y llega a la bandeja de entrada del cliente (campanita).
+function seccionPreguntas(contenedor) {
+    contenedor.innerHTML = `
+        <h2 class="h4 text-white">❓ Preguntas de clientes <span class="badgeTu align-middle" data-cantidad></span></h2>
+        <p class="text-white-50">Las sin responder primero. La respuesta le llega al cliente a su bandeja de entrada.</p>
+        <div data-lista><p class="text-white-50">Cargando...</p></div>`
+    const lista = contenedor.querySelector('[data-lista]')
+    let items = []
+
+    const cargar = () => listar('preguntas', 'fecha').then(todas => {
+        items = todas.sort((a, b) => (a.estado === 'respondida') - (b.estado === 'respondida') || (b.fecha?.toMillis?.() || 0) - (a.fecha?.toMillis?.() || 0))
+        const pendientes = items.filter(item => item.estado !== 'respondida').length
+        contenedor.querySelector('[data-cantidad]').textContent = pendientes + ' sin responder · ' + items.length + ' en total'
+        lista.innerHTML = items.length ? items.map(item => `
+            <form class="formularioLista p-3 mb-3" data-id="${escapar(item.id)}">
+                <p class="text-white mb-1"><strong>${escapar(item.nombre || 'Cliente')}</strong> <span class="text-white-50 small">${escapar(item.correo || '')} · ${escapar(fechaLegible(item.fecha))}</span></p>
+                <p class="text-white mb-2">${escapar(item.pregunta)}</p>
+                ${item.estado === 'respondida'
+                    ? `<p class="text-white-50 mb-2">✓ Respondida: ${escapar(item.respuesta)}</p>`
+                    : `<label class="text-white w-100">Respuesta<textarea class="form-control" name="respuesta" rows="2" maxlength="1000" required></textarea></label>`}
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    ${item.estado === 'respondida' ? '' : '<button class="btn btn-sm btn-warning">Responder</button>'}
+                    <button type="button" class="btn btn-sm btn-outline-danger" data-borrar>Eliminar</button>
+                </div>
+            </form>`).join('') : '<p class="text-white-50">Aún no hay preguntas.</p>'
+    }).catch(errorDeCarga)
+
+    lista.addEventListener('submit', async evento => {
+        evento.preventDefault()
+        const item = items.find(pregunta => pregunta.id === evento.target.dataset.id)
+        const respuesta = evento.target.elements.respuesta.value.trim()
+        if (!item || !respuesta) return
+        try {
+            await actualizar('preguntas', item.id, { respuesta, estado: 'respondida', respondidaPor: auth.currentUser.email })
+            await enviarNotificacion(item.uid, { tipo: 'respuesta', titulo: 'Respondimos tu pregunta', mensaje: '"' + item.pregunta + '" — ' + respuesta })
+            notificar('Respuesta enviada a la bandeja de ' + (item.nombre || 'el cliente') + '.', 'exito')
+        } catch (fallo) {
+            console.error(fallo)
+            notificar('No se pudo enviar la respuesta: ' + fallo.message, 'error')
+        }
+        cargar()
+    })
+
+    lista.addEventListener('click', async evento => {
+        if (!evento.target.closest('[data-borrar]')) return
+        const id = evento.target.closest('form').dataset.id
+        if (!await confirmar('¿Eliminar esta pregunta?', { textoConfirmar: 'Eliminar', tipo: 'error' })) return
+        try {
+            await eliminar('preguntas', id)
+            notificar('Pregunta eliminada.', 'exito')
+        } catch (fallo) {
+            console.error(fallo)
+            notificar('No se pudo eliminar la pregunta: ' + fallo.message, 'error')
+        }
+        cargar()
+    })
+
     cargar()
 }
 

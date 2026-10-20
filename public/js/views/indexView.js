@@ -8,6 +8,10 @@ import { collection, doc, onSnapshot } from 'https://www.gstatic.com/firebasejs/
 import { CONTENIDO_INICIAL } from '../utils/contenidoInicial.js'
 import { irAlHash } from '../utils/navegacion.js'
 import { enlaceWhatsapp } from '../components/Footer.js'
+import { auth, obtenerPerfil } from '../services/authService.js'
+import { marcarFavorito } from '../services/profileService.js'
+import { notificar } from '../utils/notificaciones.js'
+import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js'
 
 const IMAGEN_POR_DEFECTO = '../../assets/img/logostar.png'
 
@@ -21,6 +25,8 @@ export default {
             atracciones: [],
             servicios: [],
             cargado: false,
+            // Atracciones favoritas del cliente con sesión (ids); null = sin sesión.
+            favoritos: null,
             cancelar: []
         }
     },
@@ -46,7 +52,10 @@ export default {
                 this.contenido = { ...CONTENIDO_INICIAL, ...(snap.exists() ? snap.data() : {}) }
             }, error => console.error(error)),
             onSnapshot(collection(db, 'atracciones'), snap => { this.atracciones = ordenar(snap.docs); listo('atracciones') }, alFallar('atracciones')),
-            onSnapshot(collection(db, 'servicios'), snap => { this.servicios = ordenar(snap.docs); listo('servicios') }, alFallar('servicios'))
+            onSnapshot(collection(db, 'servicios'), snap => { this.servicios = ordenar(snap.docs); listo('servicios') }, alFallar('servicios')),
+            onAuthStateChanged(auth, async usuario => {
+                this.favoritos = usuario ? ((await obtenerPerfil(usuario.uid).catch(() => null))?.favoritos || []) : null
+            })
         ]
     },
 
@@ -78,6 +87,22 @@ export default {
         // La tienda abre el buscador con el nombre de la atracción (sin importar tildes ni mayúsculas).
         enlaceTienda(atraccion) {
             return 'tienda.html?buscar=' + encodeURIComponent(atraccion.nombre) + '#buscador'
+        },
+
+        // ♥ de cada atracción: se guarda en el perfil y se ve en Mi perfil → Favoritos.
+        async alternarFavorito(atraccion) {
+            if (!this.favoritos) {
+                notificar('Inicia sesión para guardar tus juegos favoritos.', 'info')
+                return
+            }
+            const favorito = !this.favoritos.includes(atraccion.id)
+            try {
+                await marcarFavorito(atraccion.id, favorito)
+                this.favoritos = favorito ? [...this.favoritos, atraccion.id] : this.favoritos.filter(id => id !== atraccion.id)
+            } catch (error) {
+                console.error(error)
+                notificar('No se pudo actualizar tus favoritos. Intenta nuevamente.', 'error')
+            }
         },
 
         // Bazar, Cumpleaños y Arcade tienen su propio botón o mensaje; se reconocen por el nombre que pone el admin.
@@ -140,6 +165,9 @@ export default {
                             <div class="tarjetaImgCaja">
                                 <img :src="imagenDe(atraccion)" :alt="atraccion.nombre">
                                 <div v-if="atraccion.etiqueta" class="badge">{{ atraccion.etiqueta }}</div>
+                                <button type="button" class="btn btn-sm rounded-pill position-absolute top-0 end-0 m-2" :class="favoritos?.includes(atraccion.id) ? 'btn-danger' : 'btn-dark'"
+                                    :aria-pressed="Boolean(favoritos?.includes(atraccion.id))" :aria-label="(favoritos?.includes(atraccion.id) ? 'Quitar de' : 'Agregar a') + ' mis favoritos: ' + atraccion.nombre"
+                                    @click="alternarFavorito(atraccion)">{{ favoritos?.includes(atraccion.id) ? '♥' : '♡' }}</button>
                             </div>
                             <div class="tarjetaCuerpo">
                                 <h3 class="celeste">{{ atraccion.nombre }}</h3>
@@ -170,8 +198,7 @@ export default {
                                     <li v-for="linea in lineas(servicio.descripcion)" :key="linea">{{ linea }}</li>
                                 </ul>
                                 <p v-else>{{ servicio.descripcion }}</p>
-                                <a v-if="servicioEs(servicio, 'bazar')" class="btn botonCelesteBorde align-self-start mt-auto" href="tienda.html#bazar">Ver en tienda</a>
-                                <a v-else-if="servicioEs(servicio, 'cumplea')" class="btn botonAmarillo align-self-start mt-auto" href="eventos.html">Solicitar mi evento</a>
+                                <a v-if="servicioEs(servicio, 'cumplea')" class="btn botonAmarillo align-self-start mt-auto" href="eventos.html">Solicitar mi evento</a>
                             </div>
                         </article>
                     </div>
@@ -204,9 +231,7 @@ export default {
                                 <div>
                                     <h3 class="amarillo"> 📞 Contacto Galáctico</h3>
                                     <p v-if="contenido.contacto || contenido.correo || enlaceWhatsapp" class="mb-2">
-                                        ¿Dudas sobre entradas, reservas o cumpleaños? Toca el teléfono para llamarnos,
-                                        el correo para escribirnos o el botón de WhatsApp para chatear con nuestro equipo
-                                        (se abre en una pestaña nueva con un mensaje listo para enviar).
+                                        ¿Dudas sobre entradas, reservas o cumpleaños? Comunícate con nosotros.
                                     </p>
                                     <p v-if="contenido.contacto" class="mb-1">Teléfono: <a class="celeste" :href="'tel:' + contenido.contacto.replace(/[^\\d+]/g, '')">{{ contenido.contacto }}</a></p>
                                     <p v-if="contenido.correo" class="mb-1">Correo: <a class="celeste" :href="'mailto:' + contenido.correo">{{ contenido.correo }}</a></p>

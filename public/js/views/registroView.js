@@ -126,7 +126,8 @@ export default {
                 // cuenta, así que se le ofrece ir directo a iniciar sesión.
                 if (resultado.codigo === 'auth/email-already-in-use') {
                     const irALogin = await confirmar(
-                        'Ya existe una cuenta con ' + this.correo.trim() + '. ¿Quieres iniciar sesión con ese correo?',
+                        'Ya existe una cuenta con ' + this.correo.trim() + '. ¿Quieres iniciar sesión con ese correo? ' +
+                        '(Si un administrador eliminó tu perfil, vuelve a registrarte escribiendo la misma contraseña que usabas y lo recuperarás.)',
                         { textoConfirmar: 'Iniciar sesión', textoCancelar: 'Usar otro correo' }
                     )
                     if (irALogin) window.location.href = 'login.html'
@@ -139,7 +140,9 @@ export default {
 
             // La cuenta queda con la sesión iniciada: el cliente entra directo al sitio.
             const nombre = this.nombreCompleto.trim().split(' ')[0]
-            notificarAlCargar('¡Cuenta creada con éxito! Bienvenido a Star Park, ' + nombre + '.', 'exito')
+            notificarAlCargar(resultado.recuperada
+                ? '¡Recuperaste tu cuenta! Volviste a Star Park, ' + nombre + '.'
+                : '¡Cuenta creada con éxito! Bienvenido a Star Park, ' + nombre + '.', 'exito')
             window.location.href = 'index.html'
         }
     },

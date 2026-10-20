@@ -17,7 +17,8 @@ const vistas = {
     pago: () => import('./views/pagoView.js'),
     eventos: () => import('./views/eventosView.js'),
     login: () => import('./views/loginView.js'),
-    registro: () => import('./views/registroView.js')
+    registro: () => import('./views/registroView.js'),
+    perfil: () => import('./views/perfilView.js')
 }
 
 async function iniciar() {

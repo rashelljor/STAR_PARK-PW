@@ -6,7 +6,7 @@ import Header from '../components/Header.js'
 import Footer from '../components/Footer.js'
 import { db } from '../config/firebaseConfig.js'
 import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
-import { obtenerCompras, resumenMillas } from '../services/purchaseService.js'
+import { obtenerCompras, resumenMillas, esReembolsada } from '../services/purchaseService.js'
 import { esperarUsuario, obtenerPerfil } from '../services/authService.js'
 import { notificar, notificarAlCargar } from '../utils/notificaciones.js'
 import { formatearPrecio, fechaLegible, milisegundos } from '../utils/formatters.js'
@@ -65,6 +65,7 @@ export default {
     methods: {
         formatearPrecio,
         fechaLegible,
+        esReembolsada,
 
         // Serie y correlativo del comprobante: se deriva del id único del
         // documento en Firestore para que cada boleta tenga un identificador
@@ -217,8 +218,14 @@ export default {
                         </div>
 
                         <footer class="boletaPie">
-                            <span class="boletaEstado">✓ Pagado</span>
-                            <p>¡Gracias por tu preferencia, astronauta!<template v-if="compra.millasGanadas"> Ganaste {{ compra.millasGanadas }} millas 🚀</template></p>
+                            <template v-if="esReembolsada(compra)">
+                                <span class="boletaEstado" style="background: transparent; border-color: var(--rojo); color: var(--rojo)">↩ Reembolsada</span>
+                                <p>Cancelaste esta reserva y te devolvimos {{ formatearPrecio(compra.total) }}<template v-if="compra.reembolsadaEn"> el {{ fechaLegible(compra.reembolsadaEn) }}</template>.</p>
+                            </template>
+                            <template v-else>
+                                <span class="boletaEstado">✓ Pagado</span>
+                                <p>¡Gracias por tu preferencia, astronauta!<template v-if="compra.millasGanadas"> Ganaste {{ compra.millasGanadas }} millas 🚀</template></p>
+                            </template>
                         </footer>
                     </article>
                 </div>
