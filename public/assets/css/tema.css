@@ -1,0 +1,109 @@
+/* tema.css - Modo claro opcional y ajustes de accesibilidad.
+   El modo oscuro (diseño original) no cambia: estas reglas solo aplican con
+   <html data-theme="light">, que se activa con el botón ☀️/🌙 del menú (js/utils/tema.js).
+   Sin clases nuevas: se redefinen las variables de global.css y los colores
+   fijos (#fff, rgba oscuros) de las clases existentes. */
+
+/* ===== Accesibilidad (ambos temas) ===== */
+
+/* Foco visible al navegar con teclado. */
+:focus-visible {
+  outline: 3px solid var(--celeste);
+  outline-offset: 2px;
+}
+
+/* ===== Modo claro ===== */
+
+[data-theme="light"] {
+  --fondo: #f3f5fa;
+  --tarjeta: #e7eaf2;
+  --superficie: #ffffff;
+  --texto: #1b1e2b;
+  --gris: #4a5068;
+  --borde: #cdd2e0;
+  /* Versiones oscuras de los acentos para TEXTO sobre fondo claro (contraste AA).
+     Los fondos de botones siguen usando --amarillo, --celeste, etc. */
+  --celeste-texto: #00739a;
+  --amarillo-texto: #8a6500;
+  --verde-texto: #10764f;
+  --rojo-texto: #c3193f;
+  color-scheme: light;
+}
+
+/* Zonas que siguen oscuras en modo claro (portada con foto, barra de menú y pie):
+   recuperan los valores oscuros para sus textos. */
+[data-theme="light"] :is(.hero, .barraSitio, footer.bg-dark) {
+  --tarjeta: #282a32;
+  --superficie: #191b23;
+  --texto: #e1e2ed;
+  --gris: #c3c6d7;
+  --borde: #434655;
+  --celeste-texto: #38d6ff;
+  --amarillo-texto: #ffd60a;
+  --verde-texto: #3ddc97;
+  --rojo-texto: #ff5c7a;
+}
+
+[data-theme="light"] body {
+  background-image:
+    linear-gradient(rgba(243, 245, 250, 0.9), rgba(243, 245, 250, 0.94)),
+    url('../img/fondo.png');
+}
+
+[data-theme="light"] h1 { color: var(--texto); text-shadow: none; }
+[data-theme="light"] .hero h1 { color: #ffffff; text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); }
+[data-theme="light"] .text-white { color: var(--texto) !important; }
+
+[data-theme="light"] .celeste,
+[data-theme="light"] .etiqueta,
+[data-theme="light"] .enlaceBoleta,
+[data-theme="light"] .boletaRecuadro .boletaTipo { color: var(--celeste-texto); }
+[data-theme="light"] .amarillo,
+[data-theme="light"] h1 em,
+[data-theme="light"] .boletaTotal strong { color: var(--amarillo-texto); }
+
+[data-theme="light"] .etiqueta { border-color: var(--celeste-texto); }
+[data-theme="light"] .botonCelesteBorde { color: var(--celeste-texto); border-color: var(--celeste-texto); }
+[data-theme="light"] .botonCelesteBorde:hover,
+[data-theme="light"] .botonCelesteBorde:focus-visible { background: var(--celeste-texto); color: #ffffff; }
+
+/* Encabezados de sección: misma franja de colores, fondo claro. */
+[data-theme="light"] .seccionCabecera {
+  background:
+    linear-gradient(90deg, var(--celeste), var(--violeta), var(--amarillo)) top / 100% 5px no-repeat,
+    radial-gradient(ellipse at top, rgba(56, 214, 255, 0.12), transparent 70%),
+    var(--superficie);
+  box-shadow: 0 10px 30px rgba(27, 30, 43, 0.08);
+}
+
+[data-theme="light"] .seccionCabecera h2,
+[data-theme="light"] .mensajeTitulo,
+[data-theme="light"] .boletaEmpresa,
+[data-theme="light"] .boletaInfo dd,
+[data-theme="light"] .boletaDescripcion,
+[data-theme="light"] .tablaReservas td.celdaNumero { color: var(--texto); }
+
+[data-theme="light"] .mensajeFondo { background: rgba(27, 30, 43, 0.45); }
+[data-theme="light"] .mensajeCaja { box-shadow: 0 20px 50px rgba(27, 30, 43, 0.25); }
+[data-theme="light"] .btn-close-white { filter: none; }
+
+/* Mis Reservas y boletas. */
+[data-theme="light"] .panelAdmin { background: var(--superficie); box-shadow: 0 10px 30px rgba(27, 30, 43, 0.08); }
+[data-theme="light"] .bloqueAdmin { border-color: var(--borde); }
+[data-theme="light"] .tablaReservas td { border-bottom-color: var(--borde); }
+[data-theme="light"] .tablaReservas tbody tr:nth-child(even) { background: rgba(27, 30, 43, 0.03); }
+[data-theme="light"] .estadoPendiente { color: var(--amarillo-texto); border-color: var(--amarillo-texto); }
+[data-theme="light"] .estadoPagada,
+[data-theme="light"] .boletaEstado { color: var(--verde-texto); border-color: var(--verde-texto); }
+[data-theme="light"] .botonEditar { color: var(--celeste-texto); border-color: var(--celeste-texto); }
+[data-theme="light"] .botonEliminar,
+[data-theme="light"] .mensajeError { color: var(--rojo-texto); border-color: var(--rojo-texto); }
+[data-theme="light"] .boletaFila:nth-child(odd):not(.boletaFilaTitulo) { background: rgba(27, 30, 43, 0.03); }
+
+/* Tarjetas: sombra suave en vez del brillo pensado para fondo oscuro. */
+[data-theme="light"] .tarjetaAtraccion:hover { box-shadow: 0 12px 25px rgba(0, 115, 154, 0.18); }
+[data-theme="light"] .tarjetaServicio:hover { box-shadow: 0 12px 25px rgba(138, 101, 0, 0.18); }
+
+@media (max-width: 800px) {
+  [data-theme="light"] .panelAdmin { background: transparent; box-shadow: none; }
+}

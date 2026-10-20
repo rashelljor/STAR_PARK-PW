@@ -3,9 +3,10 @@
 // Tablet y celular: menú hamburguesa con botones grandes que se cierra al elegir una opción.
 
 import { auth, obtenerPerfil, cerrarSesion } from '../services/authService.js'
-import { obtenerCarrito, EVENTO_CARRITO } from '../services/cartService.js'
+import { obtenerCarrito, contarUnidades, EVENTO_CARRITO } from '../services/cartService.js'
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js'
 import { notificar, confirmar, notificarAlCargar } from '../utils/notificaciones.js'
+import { temaActual, alternarTema } from '../utils/tema.js'
 
 // Secciones del inicio que se marcan en el menú según la que se está viendo.
 const SECCIONES_INICIO = ['atracciones', 'servicios', 'base-operaciones']
@@ -19,7 +20,8 @@ export default {
             cantidadCarrito: 0,
             rebote: false,
             pagina: document.body.dataset.page,
-            seccionActiva: ''
+            seccionActiva: '',
+            tema: temaActual()
         }
     },
 
@@ -34,7 +36,7 @@ export default {
             const perfil = await obtenerPerfil(usuario.uid).catch(() => null)
             this.nombre = perfil?.nombreCompleto?.trim().split(' ')[0] || 'Astronauta'
             this.esAdmin = perfil?.rol === 'admin'
-            this.cantidadCarrito = (await obtenerCarrito().catch(() => [])).length
+            this.cantidadCarrito = contarUnidades(await obtenerCarrito().catch(() => []))
         })
 
         this.alCambiarCarrito = evento => {
@@ -83,6 +85,10 @@ export default {
             return activo ? 'active' : ''
         },
 
+        cambiarTema() {
+            this.tema = alternarTema()
+        },
+
         async salir() {
             this.cerrarMenu()
             if (!await confirmar('¿Quieres cerrar tu sesión?', { textoConfirmar: 'Cerrar sesión' })) return
@@ -100,6 +106,8 @@ export default {
 
     template: `
         <header class="sticky-top">
+            <!-- Accesibilidad: con teclado, el primer Tab permite saltar el menú. -->
+            <a class="visually-hidden-focusable btn botonAmarillo position-absolute m-2" style="z-index: 1100" href="#contenido">Saltar al contenido</a>
             <nav class="navbar navbar-expand-lg navbar-dark barraSitio" aria-label="Menú principal">
                 <div class="container-fluid gap-2 px-3 px-lg-4">
                     <a class="navbar-brand me-0" href="index.html">
@@ -140,8 +148,10 @@ export default {
                                 <ul class="dropdown-menu">
                                     <li><a class="dropdown-item" href="tienda.html#promociones">Promociones</a></li>
                                     <li><a class="dropdown-item" href="tienda.html#botin">Catálogo</a></li>
+                                    <li><a class="dropdown-item" href="tienda.html#bazar">Bazar</a></li>
                                 </ul>
                             </li>
+                            <!-- Cumpleaños no va en el menú: se llega desde el aside de la tienda y el inicio. -->
                             <li class="nav-item">
                                 <a class="nav-link" :class="claseEnlace('reservas')" :aria-current="pagina === 'reservas' ? 'page' : null" href="reservas.html">Mis Reservas</a>
                             </li>
@@ -155,6 +165,10 @@ export default {
                         </ul>
 
                         <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-2 gap-lg-3 accionesUsuario">
+                            <button type="button" class="btn btn-outline-light rounded-pill" @click="cambiarTema"
+                                :aria-label="tema === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro'" :aria-pressed="tema === 'light'">
+                                {{ tema === 'light' ? '🌙' : '☀️' }}<span class="d-lg-none ms-2">{{ tema === 'light' ? 'Modo oscuro' : 'Modo claro' }}</span>
+                            </button>
                             <a class="btn botonAmarillo botonCarrito d-none d-lg-inline-flex align-items-center gap-2" href="carrito.html">
                                 <img src="../../assets/img/iconcarrito.png" alt="" class="icono-boton">Ver mi carrito
                                 <span v-if="cantidadCarrito" class="contadorCarrito" :class="{ rebote }" :aria-label="cantidadCarrito + ' productos'">{{ cantidadCarrito }}</span>

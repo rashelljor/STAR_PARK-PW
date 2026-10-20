@@ -7,6 +7,7 @@ import { db } from '../config/firebaseConfig.js'
 import { collection, doc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
 import { CONTENIDO_INICIAL } from '../utils/contenidoInicial.js'
 import { irAlHash } from '../utils/navegacion.js'
+import { enlaceWhatsapp } from '../components/Footer.js'
 
 const IMAGEN_POR_DEFECTO = '../../assets/img/logostar.png'
 
@@ -53,6 +54,10 @@ export default {
         // Abre Google Maps con la dirección que el admin configuró en Contenido institucional.
         enlaceMapa() {
             return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(this.contenido.ubicacion)
+        },
+
+        enlaceWhatsapp() {
+            return enlaceWhatsapp(this.contenido.whatsapp || this.contenido.contacto)
         }
     },
 
@@ -68,6 +73,16 @@ export default {
         // Cada línea de la descripción es una viñeta cuando hay más de una.
         lineas(texto) {
             return String(texto || '').split('\n').map(l => l.trim()).filter(Boolean)
+        },
+
+        // La tienda abre el buscador con el nombre de la atracción (sin importar tildes ni mayúsculas).
+        enlaceTienda(atraccion) {
+            return 'tienda.html?buscar=' + encodeURIComponent(atraccion.nombre) + '#buscador'
+        },
+
+        // Bazar, Cumpleaños y Arcade tienen su propio botón o mensaje; se reconocen por el nombre que pone el admin.
+        servicioEs(servicio, palabra) {
+            return String(servicio.nombre || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().includes(palabra)
         }
     },
 
@@ -112,7 +127,7 @@ export default {
                 </div>
             </section>
 
-            <main>
+            <main id="contenido">
                 <!-- Lista de atracciones disponibles. -->
                 <section id="atracciones">
                     <div class="seccionCabecera">
@@ -129,6 +144,8 @@ export default {
                             <div class="tarjetaCuerpo">
                                 <h3 class="celeste">{{ atraccion.nombre }}</h3>
                                 <p>{{ atraccion.descripcion }}</p>
+                                <p v-if="servicioEs(atraccion, 'arcade')" class="amarillo small fst-italic mt-auto mb-0">Los juegos de máquina funcionan con monedas, acércate al establecimiento para ser parte de la aventura.</p>
+                                <a v-else class="btn botonCelesteBorde align-self-start mt-auto" :href="enlaceTienda(atraccion)">Ver en tienda</a>
                             </div>
                         </article>
                     </div>
@@ -153,6 +170,8 @@ export default {
                                     <li v-for="linea in lineas(servicio.descripcion)" :key="linea">{{ linea }}</li>
                                 </ul>
                                 <p v-else>{{ servicio.descripcion }}</p>
+                                <a v-if="servicioEs(servicio, 'bazar')" class="btn botonCelesteBorde align-self-start mt-auto" href="tienda.html#bazar">Ver en tienda</a>
+                                <a v-else-if="servicioEs(servicio, 'cumplea')" class="btn botonAmarillo align-self-start mt-auto" href="eventos.html">Solicitar mi evento</a>
                             </div>
                         </article>
                     </div>
@@ -184,7 +203,15 @@ export default {
                             <div class="tarjetaCuerpo">
                                 <div>
                                     <h3 class="amarillo"> 📞 Contacto Galáctico</h3>
-                                    <p>{{ contenido.contacto }}</p>
+                                    <p v-if="contenido.contacto || contenido.correo || enlaceWhatsapp" class="mb-2">
+                                        ¿Dudas sobre entradas, reservas o cumpleaños? Toca el teléfono para llamarnos,
+                                        el correo para escribirnos o el botón de WhatsApp para chatear con nuestro equipo
+                                        (se abre en una pestaña nueva con un mensaje listo para enviar).
+                                    </p>
+                                    <p v-if="contenido.contacto" class="mb-1">Teléfono: <a class="celeste" :href="'tel:' + contenido.contacto.replace(/[^\\d+]/g, '')">{{ contenido.contacto }}</a></p>
+                                    <p v-if="contenido.correo" class="mb-1">Correo: <a class="celeste" :href="'mailto:' + contenido.correo">{{ contenido.correo }}</a></p>
+                                    <a v-if="enlaceWhatsapp" class="btn btn-outline-success rounded-pill mt-2" style="--bs-btn-color: var(--verde-texto, var(--verde)); --bs-btn-border-color: var(--verde-texto, var(--verde)); --bs-btn-hover-bg: var(--verde); --bs-btn-hover-border-color: var(--verde); --bs-btn-hover-color: #11131b" :href="enlaceWhatsapp" target="_blank" rel="noopener">WhatsApp</a>
+                                    <p v-if="!contenido.contacto && !contenido.correo">Pronto publicaremos nuestros datos de contacto.</p>
                                 </div>
                             </div>
                         </div>

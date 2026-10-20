@@ -109,7 +109,8 @@ export default {
             const resultado = await registrarUsuario({
                 correo: this.correo.trim(),
                 contrasena: this.contrasena,
-                nombreCompleto: this.nombreCompleto.trim(),
+                // El nombre completo se guarda siempre en mayúsculas.
+                nombreCompleto: this.nombreCompleto.trim().toLocaleUpperCase('es'),
                 nombreUsuario: this.nombreUsuario.trim(),
                 tipoDocumento: this.tipoDocumento,
                 numeroDocumento: this.numeroDocumento.trim(),
@@ -147,7 +148,7 @@ export default {
         <div>
             <Header />
 
-            <main>
+            <main id="contenido">
                 <div class="text-center text-white p-3 p-md-5">
                     <h1>CREA TU CUENTA EN <br><em class="celeste">STAR</em> <em>PARK</em></h1><br>
                     <p class="etiqueta">Únete a la tripulación</p>
@@ -177,7 +178,7 @@ export default {
 
                             <div class="campo">
                                 <label class="form-label amarillo" for="nombreCompleto">Nombre completo</label>
-                                <input v-model="nombreCompleto" type="text" id="nombreCompleto" name="nombreCompleto" autocomplete="name" placeholder="MARÍA JOSÉ TORRES FLORES" required>
+                                <input v-model="nombreCompleto" class="text-uppercase" type="text" id="nombreCompleto" name="nombreCompleto" autocomplete="name" placeholder="MARÍA JOSÉ TORRES FLORES" required>
                                 <p class="mensajeError" role="alert">{{ errores.nombreCompleto }}</p>
                             </div>
 

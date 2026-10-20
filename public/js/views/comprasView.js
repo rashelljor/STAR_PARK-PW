@@ -6,10 +6,11 @@ import Header from '../components/Header.js'
 import Footer from '../components/Footer.js'
 import { db } from '../config/firebaseConfig.js'
 import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
-import { obtenerCompras } from '../services/purchaseService.js'
+import { obtenerCompras, resumenMillas } from '../services/purchaseService.js'
 import { esperarUsuario, obtenerPerfil } from '../services/authService.js'
 import { notificar, notificarAlCargar } from '../utils/notificaciones.js'
-import { formatearPrecio, formatearFechaHora } from '../utils/formatters.js'
+import { formatearPrecio, fechaLegible, milisegundos } from '../utils/formatters.js'
+import { RANGOS_ASTRONAUTA, MILLAS_POR_CANJE, SOLES_POR_CANJE } from '../utils/constants.js'
 import { CONTENIDO_INICIAL } from '../utils/contenidoInicial.js'
 
 export default {
@@ -21,7 +22,16 @@ export default {
             compras: [],
             perfil: null,
             cargando: true,
-            direccion: CONTENIDO_INICIAL.ubicacion
+            direccion: CONTENIDO_INICIAL.ubicacion,
+            rangos: RANGOS_ASTRONAUTA,
+            millasPorCanje: MILLAS_POR_CANJE,
+            solesPorCanje: SOLES_POR_CANJE
+        }
+    },
+
+    computed: {
+        millas() {
+            return resumenMillas(this.compras)
         }
     },
 
@@ -36,7 +46,7 @@ export default {
         try {
             // Las compras más recientes primero.
             const compras = await obtenerCompras()
-            this.compras = compras.sort((a, b) => this.milisegundos(b.fecha) - this.milisegundos(a.fecha))
+            this.compras = compras.sort((a, b) => milisegundos(b.fecha) - milisegundos(a.fecha))
         } catch (error) {
             console.error(error)
             notificar('No se pudieron cargar tus compras. Recarga la página para intentarlo de nuevo.', 'error')
@@ -54,11 +64,7 @@ export default {
 
     methods: {
         formatearPrecio,
-
-        milisegundos(fecha) {
-            if (!fecha) return 0
-            return typeof fecha.toMillis === 'function' ? fecha.toMillis() : new Date(fecha).getTime()
-        },
+        fechaLegible,
 
         // Serie y correlativo del comprobante: se deriva del id único del
         // documento en Firestore para que cada boleta tenga un identificador
@@ -67,20 +73,14 @@ export default {
             return 'B001-' + (compra.id || '').slice(-8).toUpperCase().padStart(8, '0')
         },
 
-        fechaLegible(fecha) {
-            if (!fecha) return ''
-            const fechaJs = typeof fecha.toDate === 'function' ? fecha.toDate() : new Date(fecha)
-            return formatearFechaHora(fechaJs)
-        },
-
-        // El carrito guarda una línea por unidad; en la boleta se agrupan los
-        // productos iguales con su cantidad, como en un comprobante real.
+        // Las compras nuevas ya traen la cantidad de cada línea; las antiguas
+        // guardaban una línea por unidad. Ambas se agrupan igual en la boleta.
         detalle(compra) {
             const grupos = new Map()
             ;(compra.items || []).forEach(item => {
                 const clave = item.nombre + '|' + item.precio
                 const grupo = grupos.get(clave) || { nombre: item.nombre, precio: Number(item.precio || 0), cantidad: 0 }
-                grupo.cantidad++
+                grupo.cantidad += Number(item.cantidad) || 1
                 grupos.set(clave, grupo)
             })
             return [...grupos.values()]
@@ -91,14 +91,49 @@ export default {
         <div>
             <Header />
 
-            <main>
+            <main id="contenido">
                 <div class="text-center text-white p-3 p-md-5">
                     <h1>MIS COMPRAS EN <br> <em class="celeste">STAR </em><em>PARK</em></h1><br>
                     <p class="etiqueta">Tus boletas de venta registradas</p>
                 </div>
 
+                <!-- Millas espaciales y rango de astronauta. -->
+                <section v-if="!cargando" class="glass p-4 mb-4" aria-labelledby="tituloMillas">
+                    <div class="d-flex flex-wrap align-items-center gap-3 justify-content-between">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="display-5" aria-hidden="true">{{ millas.rango.icono }}</span>
+                            <div>
+                                <p class="etiquetaGris mb-0">TU RANGO DE ASTRONAUTA</p>
+                                <h2 class="h4 text-white mb-0" id="tituloMillas">{{ millas.rango.nombre }}</h2>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <p class="display-6 fw-bold amarillo mb-0">{{ millas.disponibles }}</p>
+                            <p class="etiquetaGris mb-0">MILLAS DISPONIBLES · {{ millas.ganadas }} GANADAS EN TOTAL</p>
+                        </div>
+                    </div>
+                    <div class="progress my-3" style="height: 10px; background: var(--tarjeta)" role="progressbar" :aria-valuenow="millas.avance" aria-valuemin="0" aria-valuemax="100" aria-label="Avance al siguiente rango">
+                        <div class="progress-bar" :style="{ width: millas.avance + '%', background: 'var(--celeste)' }"></div>
+                    </div>
+                    <p class="mb-3">
+                        <template v-if="millas.siguiente">Te faltan <strong class="celeste">{{ millas.siguiente.desde - millas.ganadas }} millas</strong> para ser {{ millas.siguiente.icono }} {{ millas.siguiente.nombre }}.</template>
+                        <template v-else>¡Alcanzaste el rango más alto del universo! 🌌</template>
+                        Ganas 1 milla por cada S/ 1 pagado y cada {{ millasPorCanje }} millas valen {{ formatearPrecio(solesPorCanje) }} al pagar una reserva.
+                    </p>
+                    <div class="d-flex flex-wrap gap-2" aria-label="Insignias">
+                        <span v-for="rango in rangos" :key="rango.nombre" class="etiqueta"
+                            :style="millas.ganadas >= rango.desde ? null : { opacity: 0.35 }"
+                            :title="millas.ganadas >= rango.desde ? 'Insignia obtenida' : 'Desde ' + rango.desde + ' millas'">
+                            {{ rango.icono }} {{ rango.nombre }}
+                        </span>
+                    </div>
+                </section>
+
                 <div id="listaCompras">
-                    <p v-if="cargando" class="etiqueta glass text-center p-4">Cargando tus boletas...</p>
+                    <div v-if="cargando" class="placeholder-glow" role="status">
+                        <span class="visually-hidden">Cargando tus boletas...</span>
+                        <span v-for="n in 2" :key="n" class="placeholder col-12 rounded mb-4" style="height: 320px" aria-hidden="true"></span>
+                    </div>
                     <div v-else-if="compras.length === 0" class="boletaVacia glass">
                         <p>No has realizado ninguna compra todavía.</p>
                         <a class="btn botonAmarillo" href="reservas.html">Ver mis reservas</a>
@@ -139,6 +174,14 @@ export default {
                                 <dt>Moneda</dt>
                                 <dd>Soles (PEN)</dd>
                             </div>
+                            <div v-if="compra.tarjeta">
+                                <dt>Pago</dt>
+                                <dd>{{ compra.tarjeta.marca }} •••• {{ compra.tarjeta.ultimos4 }} · Aut. {{ compra.codigoAutorizacion }}</dd>
+                            </div>
+                            <div v-if="compra.fechaVisita">
+                                <dt>Fecha de visita</dt>
+                                <dd>{{ compra.fechaVisita }}</dd>
+                            </div>
                         </dl>
 
                         <!-- Detalle: en 640px cada fila pasa a dos líneas (ver compras.css). -->
@@ -155,16 +198,27 @@ export default {
                                 <span role="cell" class="numero boletaUnitario">{{ formatearPrecio(linea.precio) }}</span>
                                 <span role="cell" class="numero boletaImporte">{{ formatearPrecio(linea.precio * linea.cantidad) }}</span>
                             </div>
+                            <!-- Descuentos: cupón y millas canjeadas. -->
+                            <div v-if="compra.descuentoCupon" class="boletaFila" role="row">
+                                <span role="cell" class="boletaDescripcion celeste">Descuento cupón {{ compra.cupon }}</span>
+                                <span role="cell"></span><span role="cell"></span>
+                                <span role="cell" class="numero boletaImporte celeste">− {{ formatearPrecio(compra.descuentoCupon) }}</span>
+                            </div>
+                            <div v-if="compra.descuentoMillas" class="boletaFila" role="row">
+                                <span role="cell" class="boletaDescripcion celeste">Canje de {{ compra.millasUsadas }} millas espaciales</span>
+                                <span role="cell"></span><span role="cell"></span>
+                                <span role="cell" class="numero boletaImporte celeste">− {{ formatearPrecio(compra.descuentoMillas) }}</span>
+                            </div>
                         </div>
 
                         <div class="boletaTotal">
                             <span>Importe total</span>
-                            <strong>{{ compra.total }}</strong>
+                            <strong>{{ formatearPrecio(compra.total) }}</strong>
                         </div>
 
                         <footer class="boletaPie">
                             <span class="boletaEstado">✓ Pagado</span>
-                            <p>¡Gracias por tu preferencia, astronauta!</p>
+                            <p>¡Gracias por tu preferencia, astronauta!<template v-if="compra.millasGanadas"> Ganaste {{ compra.millasGanadas }} millas 🚀</template></p>
                         </footer>
                     </article>
                 </div>

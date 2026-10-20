@@ -2,8 +2,9 @@
 
 /* Botón para añadir el producto al carrito. */
 /* Usa las variables del componente .btn de Bootstrap para heredar sus
-   estados hover/active/focus, solo reemplazando los colores de marca. */
-.tarjetaServicio button {
+   estados hover/active/focus, solo reemplazando los colores de marca.
+   Solo el hijo directo de .tarjetaCuerpo: "Comentarios" conserva su gris. */
+.tarjetaServicio > .tarjetaCuerpo > button {
     --bs-btn-color: #3c2f00;
     --bs-btn-bg: var(--amarillo);
     --bs-btn-border-color: var(--amarillo);
@@ -18,7 +19,7 @@
     padding: 10px;
 }
 
-.tarjetaAtraccion button {
+.tarjetaAtraccion > .tarjetaCuerpo > button {
     --bs-btn-color: rgba(17, 18, 59, 0.837);
     --bs-btn-bg: var(--celeste);
     --bs-btn-border-color: var(--celeste);

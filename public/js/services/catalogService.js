@@ -49,3 +49,21 @@ export function searchProducts(termino, productos) {
 export function getImagenPorDefecto() {
     return IMAGEN_PRODUCTO_POR_DEFECTO
 }
+
+// Nombres que se usaban antes del selector de colores, convertidos a su código.
+const COLORES_POR_NOMBRE = {
+    rojo: '#e53935', amarillo: '#fdd835', verde: '#43a047', azul: '#1e88e5', celeste: '#4fc3f7',
+    rosado: '#ec407a', rosa: '#ec407a', morado: '#8e24aa', violeta: '#8e24aa', lila: '#ba68c8',
+    naranja: '#fb8c00', anaranjado: '#fb8c00', negro: '#212121', blanco: '#ffffff', gris: '#9e9e9e',
+    marron: '#6d4c41', cafe: '#6d4c41', dorado: '#d4af37', plateado: '#c0c0c0'
+}
+
+// Colores del bazar como lista de códigos (#rrggbb). Antes se guardaban como
+// texto separado por comas ("Rojo, azul"); esos nombres se convierten aquí.
+export function coloresDe(producto) {
+    const colores = Array.isArray(producto?.colores) ? producto.colores : String(producto?.colores || '').split(',')
+    return colores
+        .map(color => String(color).trim())
+        .filter(Boolean)
+        .map(color => COLORES_POR_NOMBRE[color.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()] || color)
+}

@@ -1,25 +1,24 @@
 // Reservas.js - Vista de "Mis Reservas" (antes users/reservas.html y
-// controller/reservas.js). Lista las reservas guardadas y permite pagarlas,
-// editarlas o eliminarlas. Una reserva pagada ya no se puede editar ni quitar
-// (también lo impiden las reglas de Firestore).
+// controller/reservas.js). Lista las reservas guardadas y permite pagarlas
+// (en la página de pago), editarlas o eliminarlas. Una reserva pagada ya no se
+// puede editar ni quitar (también lo impiden las reglas de Firestore) y muestra
+// su entrada digital con código QR.
 // En pantallas de 800px o menos, la tabla se muestra como tarjetas apiladas (ver reservas.css).
 
 import Header from '../components/Header.js'
 import Footer from '../components/Footer.js'
-import {
-    obtenerReservas,
-    pagarReserva,
-    actualizarReserva,
-    eliminarReserva
-} from '../services/bookingService.js'
+import CalendarioAforo from '../components/CalendarioAforo.js'
+import EntradaQR from '../components/EntradaQR.js'
+import { obtenerReservas, actualizarReserva, eliminarReserva, entradasDe } from '../services/bookingService.js'
+import { cuposLibres } from '../services/capacityService.js'
 import { esperarUsuario } from '../services/authService.js'
 import { notificar, confirmar, notificarAlCargar } from '../utils/notificaciones.js'
-import { formatearFechaHora } from '../utils/formatters.js'
+import { fechaLegible, formatearPrecio, milisegundos } from '../utils/formatters.js'
 import { rangoFechasReserva, erroresDatosReserva } from '../utils/validators.js'
 
 export default {
 
-    components: { Header, Footer },
+    components: { Header, Footer, CalendarioAforo, EntradaQR },
 
     data() {
         return {
@@ -27,6 +26,8 @@ export default {
             cargando: true,
             // Reserva que se está editando en el modal (null = modal cerrado).
             edicion: null,
+            // Reserva pagada cuya entrada QR se está mostrando.
+            entrada: null,
             guardando: false,
             fechas: rangoFechasReserva()
         }
@@ -51,34 +52,30 @@ export default {
     },
 
     methods: {
+        fechaLegible,
+        formatearPrecio,
+        entradasDe,
+
         // Las más recientes primero.
         async cargar() {
             const reservas = await obtenerReservas()
-            this.reservas = reservas.sort((a, b) => this.milisegundos(b.fechaRegistro) - this.milisegundos(a.fechaRegistro))
+            this.reservas = reservas.sort((a, b) => milisegundos(b.fechaRegistro) - milisegundos(a.fechaRegistro))
         },
 
-        milisegundos(fecha) {
-            if (!fecha) return 0
-            return typeof fecha.toMillis === 'function' ? fecha.toMillis() : new Date(fecha).getTime()
+        textoEstado(reserva) {
+            if (reserva.estado === 'usada') return '✓ Entrada usada'
+            return reserva.pagado ? '✓ Pagada' : 'Pendiente de pago'
         },
 
-        fechaLegible(fecha) {
-            if (!fecha) return ''
-            const fechaJs = typeof fecha.toDate === 'function' ? fecha.toDate() : new Date(fecha)
-            return formatearFechaHora(fechaJs)
-        },
-
-        async pagar(reserva) {
-            if (!await confirmar('¿Confirmas el pago de ' + reserva.total + ' por tu visita del ' + reserva.fecha + '?', { textoConfirmar: 'Pagar', tipo: 'info' })) return
-
-            try {
-                await pagarReserva(reserva)
-                await this.cargar()
-                notificar('Pago confirmado. Revisa tu boleta en Mis Compras.', 'exito')
-            } catch (error) {
-                console.error(error)
-                notificar('No se pudo procesar el pago. Intenta nuevamente.', 'error')
+        // El pago se hace en su propia página, con los datos de la tarjeta.
+        pagar(reserva) {
+            // Las reservas anteriores al nuevo sistema guardaban el total como texto
+            // y las reglas de pago no pueden validarlas.
+            if (typeof reserva.total !== 'number') {
+                notificar('Esta reserva se registró con el sistema anterior y no puede pagarse. Quítala y vuelve a reservar desde la tienda.', 'advertencia')
+                return
             }
+            window.location.href = 'pago.html?reserva=' + encodeURIComponent(reserva.id)
         },
 
         // Abre el modal con una copia de los datos: si el cliente cancela, la tabla no cambia.
@@ -86,7 +83,7 @@ export default {
             if (reserva.pagado) return
             this.fechas = rangoFechasReserva()
             this.edicion = {
-                id: reserva.id,
+                original: reserva,
                 nombre: reserva.nombre || '',
                 correo: reserva.correo || '',
                 telefono: reserva.telefono || '',
@@ -109,8 +106,14 @@ export default {
 
             this.guardando = true
             try {
-                const { id, nombre, correo, telefono, fecha } = this.edicion
-                await actualizarReserva(id, {
+                const { original, nombre, correo, telefono, fecha } = this.edicion
+                const entradas = entradasDe(original)
+                if (fecha !== original.fecha && await cuposLibres(fecha, original.id) < entradas) {
+                    notificar('El ' + fecha + ' ya no tiene cupos para ' + entradas + ' entradas. Elige otra fecha.', 'advertencia')
+                    this.guardando = false
+                    return
+                }
+                await actualizarReserva(original, {
                     nombre: nombre.trim(),
                     correo: correo.trim(),
                     telefono: telefono.replace(/\s/g, ''),
@@ -132,7 +135,7 @@ export default {
             if (!await confirmar('¿Quitar esta reserva? Esta acción no se puede deshacer.', { textoConfirmar: 'Quitar', tipo: 'error' })) return
 
             try {
-                await eliminarReserva(reserva.id)
+                await eliminarReserva(reserva)
                 await this.cargar()
                 notificar('Reserva eliminada correctamente.', 'exito')
             } catch (error) {
@@ -146,14 +149,16 @@ export default {
         <div>
             <Header />
 
-            <main>
+            <main id="contenido">
                 <div class="text-center text-white p-3 p-md-5">
                     <h1>PANEL DE RESERVA EN <br> <em class="celeste">STAR </em><em>PARK</em></h1><br>
                     <p class="etiqueta">Todas tus reservas registradas</p>
                 </div>
 
                 <div class="panelAdmin">
-                    <p v-if="cargando" class="text-center etiquetaGris p-3">Cargando tus reservas...</p>
+                    <div v-if="cargando" class="placeholder-glow p-2" aria-busy="true" aria-label="Cargando tus reservas">
+                        <span v-for="n in 4" :key="n" class="placeholder col-12 mb-3 rounded" style="height: 44px"></span>
+                    </div>
                     <div v-else-if="reservas.length === 0" class="reservasVacio">
                         <p>Aún no tienes reservas.</p>
                         <a class="btn botonAmarillo" href="tienda.html">Ir a la tienda</a>
@@ -181,11 +186,14 @@ export default {
                                     <td data-label="Correo" class="celdaCorreo">{{ reserva.correo }}</td>
                                     <td data-label="Teléfono">{{ reserva.telefono }}</td>
                                     <td data-label="Fecha de visita" class="celdaDestacada">{{ reserva.fecha }}</td>
-                                    <td data-label="Total" class="amarillo celdaDestacada">{{ reserva.total }}</td>
+                                    <td data-label="Total" class="amarillo celdaDestacada">
+                                        {{ formatearPrecio(reserva.total) }}
+                                        <small v-if="reserva.cupon" class="d-block celeste">Cupón {{ reserva.cupon }}</small>
+                                    </td>
                                     <td data-label="Registrada">{{ fechaLegible(reserva.fechaRegistro) }}</td>
                                     <td data-label="Estado">
                                         <span class="estadoReserva" :class="reserva.pagado ? 'estadoPagada' : 'estadoPendiente'">
-                                            {{ reserva.pagado ? '✓ Pagada' : 'Pendiente de pago' }}
+                                            {{ textoEstado(reserva) }}
                                         </span>
                                     </td>
                                     <td data-label="Acciones" class="celdaAcciones">
@@ -194,7 +202,10 @@ export default {
                                             <button class="botonEditar" @click="abrirEdicion(reserva)">Editar</button>
                                             <button class="botonEliminar" @click="eliminar(reserva)">Quitar</button>
                                         </div>
-                                        <a v-else class="enlaceBoleta" href="miscompras.html">Ver boleta →</a>
+                                        <div v-else class="accionesReserva">
+                                            <button class="botonEditar" @click="entrada = reserva">🎟️ Ver entrada</button>
+                                            <a class="enlaceBoleta" href="miscompras.html">Ver boleta →</a>
+                                        </div>
                                     </td>
                                 </tr>
                             </tbody>
@@ -202,6 +213,18 @@ export default {
                     </div>
                 </div>
             </main>
+
+            <!-- Entrada digital con QR (reutiliza la tarjeta de los mensajes centrados). -->
+            <div v-if="entrada" class="mensajeFondo" @click.self="entrada = null" @keydown.esc="entrada = null">
+                <div class="mensajeCaja mensaje-exito cajaFormulario" role="dialog" aria-modal="true" aria-labelledby="tituloEntrada">
+                    <h2 class="mensajeTitulo" id="tituloEntrada">Tu entrada a Star Park</h2>
+                    <p class="etiquetaGris mb-3">Muestra este código en la puerta el día de tu visita.</p>
+                    <EntradaQR :reserva="entrada" />
+                    <div class="mensajeAcciones">
+                        <button type="button" class="mensajeBoton" @click="entrada = null" ref="cerrarEntrada">Cerrar</button>
+                    </div>
+                </div>
+            </div>
 
             <!-- Modal de edición: un solo formulario en lugar de cuatro ventanas emergentes. -->
             <div v-if="edicion" class="mensajeFondo" @click.self="cerrarEdicion" @keydown.esc="cerrarEdicion">
@@ -222,8 +245,11 @@ export default {
                         <input v-model="edicion.telefono" class="form-control" type="tel" id="editarTelefono" inputmode="numeric" placeholder="999 999 999" autocomplete="tel">
                     </div>
                     <div class="campo">
-                        <label class="form-label celeste" for="editarFecha">Fecha de visita</label>
-                        <input v-model="edicion.fecha" :min="fechas.minima" :max="fechas.maxima" class="form-control" type="date" id="editarFecha">
+                        <span class="form-label celeste">Fecha de visita</span>
+                        <!-- Las reservas antiguas (sin "entradas") no tienen registro de aforo: no hay nada propio que descontar. -->
+                        <CalendarioAforo v-model="edicion.fecha" :min="fechas.minima" :max="fechas.maxima"
+                            :entradas="entradasDe(edicion.original)"
+                            :ignorar="{ fecha: edicion.original.fecha, entradas: edicion.original.entradas || 0 }" />
                     </div>
 
                     <div class="mensajeAcciones">

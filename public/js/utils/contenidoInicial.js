@@ -5,7 +5,9 @@
 export const CONTENIDO_INICIAL = {
     ubicacion: 'Sótano del Centro Comercial Constitución, Calle Real 475, Huancayo, Junín - Perú',
     horarios: 'Lun a Vie: 11:00 AM - 10:00 PM | Sáb a Dom: 10:00 AM - 10:00 PM',
-    contacto: 'Pronto publicaremos nuestros datos de contacto.'
+    contacto: '',
+    whatsapp: '',
+    correo: ''
 }
 
 export const ATRACCIONES_INICIALES = [
@@ -152,17 +154,6 @@ export const PRODUCTOS_INICIALES = [
         duracion: '1 hora',
         imagen: '../../assets/img/vis05.png',
         alt: 'Entrada del parque, Star Park',
-        estado: 'Activo'
-    },
-    {
-        id: 'botin-cumple',
-        nombre: 'Cumpleaños Espacial',
-        descripcion: 'Evento completo',
-        categoria: 'botin',
-        precio: 1200,
-        duracion: 'evento completo',
-        imagen: '../../assets/img/cumpleaños.png',
-        alt: 'Cumpleaños Espaciales, ejemplo de decoración y animación',
         estado: 'Activo'
     }
 ]

@@ -19,12 +19,12 @@ body {
 #adminContent > h1 { margin-bottom: 12px; }
 
 /* ===== Estructura del panel (HeaderAdmin.js) =====
-   Barra violeta + menú lateral: el panel se distingue a simple vista del
+   Barra azul + menú lateral: el panel se distingue a simple vista del
    sitio de clientes, que usa una barra oscura con borde celeste. */
 :root {
-  --admin-barra: #2b1660;
-  --admin-barra-2: #4a1f8f;
-  --admin-sidebar: #160d2e;
+  --admin-barra: #0b2a5b;
+  --admin-barra-2: #1554a8;
+  --admin-sidebar: #0a1730;
   --admin-ancho-sidebar: 270px;
   --admin-alto-barra: 64px;
 }
@@ -59,7 +59,7 @@ body {
 /* Etiqueta fija que recuerda en qué modo se está. */
 .adminModo {
   background: var(--amarillo);
-  color: #1a0f3a;
+  color: #0b1a3a;
   border-radius: 999px;
   font-size: 13px;
   font-weight: 800;
@@ -78,23 +78,23 @@ body {
 }
 
 .adminCorreo {
-  color: #e6dcff;
+  color: #dbe9ff;
   font-size: 13px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.adminBotonSitio { border: 1px solid #cdb8ff; color: #ffffff; border-radius: 999px; }
+.adminBotonSitio { border: 1px solid #9cc8ff; color: #ffffff; border-radius: 999px; }
 .adminBotonSitio:hover { background: #ffffff; color: var(--admin-barra); }
 
-.adminBotonSalir { background: var(--rojo); border: 1px solid var(--rojo); color: #1a0f3a; font-weight: 700; border-radius: 999px; }
-.adminBotonSalir:hover { background: #ff8099; color: #1a0f3a; }
+.adminBotonSalir { background: var(--rojo); border: 1px solid var(--rojo); color: #0b1a3a; font-weight: 700; border-radius: 999px; }
+.adminBotonSalir:hover { background: #ff8099; color: #0b1a3a; }
 
 .adminMenuBoton {
   display: none;
   background: transparent;
-  border: 1px solid #cdb8ff;
+  border: 1px solid #9cc8ff;
   border-radius: 8px;
   color: #ffffff;
   font-size: 20px;
@@ -114,7 +114,7 @@ body {
   justify-content: space-between;
   padding: 20px 12px;
   background: var(--admin-sidebar);
-  border-right: 1px solid rgba(163, 116, 255, 0.3);
+  border-right: 1px solid rgba(56, 150, 255, 0.3);
 }
 
 .adminSidebar ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
@@ -127,7 +127,7 @@ body {
   padding: 10px 14px;
   border-radius: 10px;
   border-left: 4px solid transparent;
-  color: #e6dcff;
+  color: #dbe9ff;
   font-size: 14px;
   font-weight: 600;
   text-decoration: none;
@@ -135,7 +135,7 @@ body {
 }
 
 .adminSidebar a span { font-size: 18px; }
-.adminSidebar a:hover { background: rgba(163, 116, 255, 0.15); color: #ffffff; transform: translateX(3px); }
+.adminSidebar a:hover { background: rgba(56, 150, 255, 0.15); color: #ffffff; transform: translateX(3px); }
 
 .adminSidebar a.active {
   background: rgba(255, 214, 10, 0.12);
@@ -143,17 +143,7 @@ body {
   color: var(--amarillo);
 }
 
-.adminSidebarSalir {
-  margin-top: 24px;
-  min-height: 48px;
-  background: transparent;
-  border: 1px solid var(--rojo);
-  border-radius: 10px;
-  color: var(--rojo);
-  font-weight: 700;
-}
 
-.adminSidebarSalir:hover { background: var(--rojo); color: #1a0f3a; }
 
 .adminSidebarFondo { display: none; }
 
@@ -187,7 +177,7 @@ body {
 
 .kpi-celeste { --kpi: var(--celeste); }
 .kpi-verde { --kpi: var(--verde); }
-.kpi-violeta { --kpi: var(--violeta); }
+.kpi-violeta { --kpi: #5b8cff; }
 .kpi-amarillo { --kpi: var(--amarillo); }
 
 .kpiIcono {
@@ -230,7 +220,7 @@ body {
 }
 
 .badgeTu {
-  background: var(--violeta);
+  background: #1554a8;
   border-radius: 999px;
   color: #ffffff;
   font-size: 11px;
@@ -286,8 +276,8 @@ body {
   .adminBarra { gap: 10px; padding: 0 12px; }
   .adminLogo { display: none; }
   .adminModo { font-size: 11px; padding: 5px 10px; }
-  /* El acceso al sitio y "Cerrar sesión" siguen en el menú lateral. */
-  .adminBotonSitio { display: none; }
+  /* "Ver sitio" y "Cerrar sesión" solo están en la barra: se compactan, no se ocultan. */
+  .adminBotonSitio, .adminBotonSalir { padding: 4px 10px; white-space: nowrap; }
   .kpiGrilla { grid-template-columns: minmax(0, 1fr); }
   .kpiValor { font-size: 34px; }
 }

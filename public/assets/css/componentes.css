@@ -544,6 +544,25 @@ button:not(:disabled):active {
   color: #0b0d14;
 }
 
+/* Botones de acción pequeños (Mis Reservas, carrito y cumpleaños). */
+.botonEliminar,
+.botonEditar,
+.botonPagar {
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 14px;
+}
+
+.botonPagar { background: var(--verde); border: 1px solid var(--verde); color: #0b0d14; }
+.botonEditar { border: 1px solid var(--celeste); color: var(--celeste); }
+.botonEliminar { border: 1px solid var(--rojo); color: var(--rojo); }
+
+.botonEditar:hover { background: var(--celeste); color: #0b0d14; }
+.botonEliminar:hover { background: var(--rojo); color: #0b0d14; }
+
 /* Lista de requisitos de la contraseña (registro). Gris antes de escribir;
    luego cada línea pasa a rojo (falta) o verde (cumple). */
 .requisitosContrasena {

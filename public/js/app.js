@@ -5,6 +5,8 @@ import { createApp } from 'https://cdn.jsdelivr.net/npm/vue@3/dist/vue.esm-brows
 // Se importa en todas las páginas para mostrar los mensajes que deja la página anterior
 // (bienvenida, cierre de sesión...) y el aviso de conexión perdida.
 import './utils/notificaciones.js'
+// Aplica el modo claro si el visitante lo eligió antes (el oscuro es el original).
+import './utils/tema.js'
 
 const vistas = {
     inicio: () => import('./views/indexView.js'),
@@ -12,6 +14,8 @@ const vistas = {
     carrito: () => import('./views/carritoView.js'),
     reservas: () => import('./views/reservasView.js'),
     miscompras: () => import('./views/comprasView.js'),
+    pago: () => import('./views/pagoView.js'),
+    eventos: () => import('./views/eventosView.js'),
     login: () => import('./views/loginView.js'),
     registro: () => import('./views/registroView.js')
 }

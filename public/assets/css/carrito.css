@@ -17,10 +17,29 @@
     padding: 10px 0;
 }
 
-.itemCarrito button {
+/* Botones − y + de la cantidad: texto gris sin aspecto de botón; celeste al
+   pasar el mouse y amarillo al presionarlos. "Eliminar" usa .botonEliminar. */
+.itemCarrito button:not(.botonEliminar) {
     background: transparent;
-    color: var(--rojo);
+    border: 0;
+    color: var(--gris);
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 2px 6px;
 }
+
+.itemCarrito button:not(.botonEliminar):not(:disabled):hover {
+    box-shadow: none;
+    color: var(--celeste-texto, var(--celeste));
+    transform: none;
+}
+
+.itemCarrito button:not(.botonEliminar):not(:disabled):active {
+    color: var(--amarillo-texto, var(--amarillo));
+}
+
+.itemCarrito button:not(.botonEliminar):disabled { opacity: 0.5; }
 
 /* En móvil, productos y formulario se apilan en una sola columna. */
 @media (max-width: 640px) {

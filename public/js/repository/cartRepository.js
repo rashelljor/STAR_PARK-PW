@@ -6,19 +6,34 @@ function carritoRef() {
     return collection(db, 'usuarios', auth.currentUser.uid, 'carrito')
 }
 
+// Una línea por producto: { id, nombre, precio, cantidad }. Antes se guardaba
+// un documento por unidad; esas filas antiguas se agrupan aquí al leer.
 export async function leerCarrito() {
     const snapshot = await getDocs(carritoRef())
-    // El id real del documento va al final: cada item ya trae su propio
-    // "id" (el del producto), y si fuera primero quedaría tapado por ese
-    // campo, haciendo que dos unidades del mismo producto compartan id.
-    return snapshot.docs.map(documento => ({ ...documento.data(), id: documento.id }))
+    const lineas = new Map()
+    snapshot.docs.forEach(documento => {
+        const item = documento.data()
+        const id = item.id || documento.id
+        const linea = lineas.get(id) || { id, nombre: item.nombre, precio: Number(item.precio) || 0, cantidad: 0 }
+        // Productos del bazar: guardan su categoría, el stock que había al agregarlos
+        // y el color elegido (cada color es una línea; productoId es el del catálogo).
+        if (item.categoria) linea.categoria = item.categoria
+        if (item.stock != null) linea.stock = Number(item.stock)
+        if (item.productoId) linea.productoId = item.productoId
+        if (item.color) linea.color = item.color
+        linea.cantidad += Number(item.cantidad) || 1
+        lineas.set(id, linea)
+    })
+    return [...lineas.values()]
 }
 
+// El id del documento es el de la línea (el producto, o producto + color en el bazar).
 export async function guardarCarrito(items) {
     const referencia = carritoRef()
     const actual = await getDocs(referencia)
-    await Promise.all(actual.docs.map(documento => deleteDoc(documento.ref)))
-    await Promise.all(items.map(item => setDoc(doc(referencia), item)))
+    const ids = new Set(items.map(item => item.id))
+    await Promise.all(actual.docs.filter(documento => !ids.has(documento.id)).map(documento => deleteDoc(documento.ref)))
+    await Promise.all(items.map(item => setDoc(doc(referencia, item.id), item)))
     return items
 }
 

@@ -15,9 +15,97 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    // Solo cambian estos campos (el resto del documento queda igual).
+    function soloCambia(campos) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(campos);
+    }
+
+    // Dos montos en soles son iguales si difieren en menos de un céntimo.
+    function mismoMonto(a, b) {
+      return math.abs(a - b) < 0.01;
+    }
+
+    function reserva(id) {
+      return get(/databases/$(database)/documents/reservas/$(id)).data;
+    }
+
+    function reservaDespues(id) {
+      return getAfter(/databases/$(database)/documents/reservas/$(id)).data;
+    }
+
+    // La reserva se crea en esta misma operación (antes no existía).
+    function reservaNueva(id) {
+      return !exists(/databases/$(database)/documents/reservas/$(id)) &&
+        existsAfter(/databases/$(database)/documents/reservas/$(id)) &&
+        reservaDespues(id).uid == request.auth.uid;
+    }
+
+    // La reserva se quita en esta misma operación, sin haberse pagado, y había
+    // apartado stock y cupón al crearse.
+    function reservaQuitada(id) {
+      return exists(/databases/$(database)/documents/reservas/$(id)) &&
+        !existsAfter(/databases/$(database)/documents/reservas/$(id)) &&
+        reserva(id).uid == request.auth.uid &&
+        reserva(id).pagado != true &&
+        reserva(id).get('apartado', false) == true;
+    }
+
+    // Programa de millas: deben ser los mismos valores de public/js/utils/constants.js
+    // (MILLAS_POR_SOL, MILLAS_POR_CANJE, SOLES_POR_CANJE y COMPRAS_CLIENTE_FRECUENTE).
+    function millasPorSol() { return 1; }
+    function millasPorCanje() { return 100; }
+    function solesPorCanje() { return 5; }
+    function comprasClienteFrecuente() { return 3; }
+
+    // Ítems de una reserva (líneas del carrito). Las reglas no tienen bucles,
+    // así que cada función se repite para las líneas 0 a 4: el carrito admite
+    // hasta 5 líneas (MAX_LINEAS_CARRITO en constants.js). Con 6 se pasa del
+    // límite de 1000 expresiones por evaluación.
+    function idProducto(item) {
+      return item.get('productoId', item.id);
+    }
+
+    function esBazar(item) {
+      return item.get('categoria', '') == 'bazar';
+    }
+
+    function productoDespues(item) {
+      return getAfter(/databases/$(database)/documents/productos/$(idProducto(item))).data;
+    }
+
+    // Unidades del bazar de un producto (sus colores son líneas distintas y comparten stock).
+    function unidadesLinea(items, i, productoId) {
+      return i < items.size() && esBazar(items[i]) && idProducto(items[i]) == productoId ? items[i].cantidad : 0;
+    }
+
+    function unidadesProducto(items, productoId) {
+      return unidadesLinea(items, 0, productoId) + unidadesLinea(items, 1, productoId) + unidadesLinea(items, 2, productoId) +
+        unidadesLinea(items, 3, productoId) + unidadesLinea(items, 4, productoId);
+    }
+
     match /productos/{id} {
+      // El cliente solo mueve el stock del bazar junto con su reserva: lo aparta
+      // al reservar y lo devuelve al quitar una reserva sin pagar, por las
+      // unidades exactas de la reserva y sin bajar de 0.
+      function stockApartado() {
+        let reservaId = request.resource.data.ultimaReserva;
+        return soloCambia(['stock', 'ultimaReserva']) &&
+          request.resource.data.stock is int &&
+          request.resource.data.stock >= 0 &&
+          reservaNueva(reservaId) &&
+          resource.data.stock - request.resource.data.stock == unidadesProducto(reservaDespues(reservaId).items, id);
+      }
+
+      function stockDevuelto() {
+        let reservaId = request.resource.data.ultimaDevolucion;
+        return soloCambia(['stock', 'ultimaDevolucion']) &&
+          reservaQuitada(reservaId) &&
+          request.resource.data.stock - resource.data.stock == unidadesProducto(reserva(reservaId).items, id);
+      }
+
       allow read: if true;
-      allow create, update, delete: if admin();
+      allow create, delete: if admin();
+      allow update: if admin() || (signedIn() && (stockApartado() || stockDevuelto()));
     }
 
     match /contenido/{id} {
@@ -35,6 +123,12 @@ service cloud.firestore {
       allow create, update, delete: if admin();
     }
 
+    // Paquetes de cumpleaños: públicos; solo el admin los edita (Gestión de catálogo).
+    match /paquetes/{id} {
+      allow read: if true;
+      allow create, update, delete: if admin();
+    }
+
     match /usuarios/{uid} {
       allow create: if ownUser(uid) && request.resource.data.rol == 'cliente';
       allow read: if ownUser(uid) || admin();
@@ -48,31 +142,284 @@ service cloud.firestore {
       }
     }
 
+    // El cliente crea su reserva como pendiente y con montos coherentes: cada
+    // línea con el precio actual del catálogo, subtotal = suma de las líneas,
+    // entradas = unidades que no son del bazar y total = subtotal - cupón.
+    // En la misma operación crea su registro de aforo, aparta el stock del
+    // bazar y suma el uso del cupón. Después ya no puede tocar montos, ítems
+    // ni el estado de pago.
     match /reservas/{id} {
       function propia() {
         return signedIn() && resource.data.uid == request.auth.uid;
       }
 
-      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      // Precio y categoría del catálogo; las líneas del bazar deben haber apartado su stock.
+      // (El producto se pasa como argumento para leerlo una sola vez: las reglas
+      // tienen un límite de 1000 expresiones por evaluación.)
+      function lineaValida(items, i) {
+        return i >= items.size() || lineaDeProducto(items[i], productoDespues(items[i]));
+      }
+
+      function lineaDeProducto(item, producto) {
+        let bazar = producto.get('categoria', '') == 'bazar';
+        return item.cantidad is int &&
+          item.cantidad > 0 &&
+          item.precio is number &&
+          math.abs(item.precio - producto.precio) < 0.01 &&
+          esBazar(item) == bazar &&
+          (!bazar || producto.get('ultimaReserva', '') == id);
+      }
+
+      function montoLinea(items, i) {
+        return i < items.size() ? items[i].precio * items[i].cantidad : 0;
+      }
+
+      function entradasLinea(items, i) {
+        return i < items.size() && !esBazar(items[i]) ? items[i].cantidad : 0;
+      }
+
+      function itemsValidos(datos) {
+        let items = datos.items;
+        return items is list && items.size() > 0 && items.size() <= 5 &&
+          lineaValida(items, 0) && lineaValida(items, 1) && lineaValida(items, 2) &&
+          lineaValida(items, 3) && lineaValida(items, 4) &&
+          mismoMonto(datos.subtotal, montoLinea(items, 0) + montoLinea(items, 1) + montoLinea(items, 2) +
+            montoLinea(items, 3) + montoLinea(items, 4)) &&
+          datos.entradas == entradasLinea(items, 0) + entradasLinea(items, 1) + entradasLinea(items, 2) +
+            entradasLinea(items, 3) + entradasLinea(items, 4);
+      }
+
+      // Compras pagadas del cliente, según su contador de fidelidad.
+      function compras() {
+        return exists(/databases/$(database)/documents/fidelidad/$(request.auth.uid))
+          ? get(/databases/$(database)/documents/fidelidad/$(request.auth.uid)).data.compras
+          : 0;
+      }
+
+      // "vencimiento" es 'AAAA-MM-DD' y vale hasta el final de ese día en Perú (UTC-5).
+      function vigente(cupon) {
+        let vence = cupon.get('vencimiento', null);
+        return vence == null || vence == '' ||
+          request.time < timestamp.date(int(vence.split('-')[0]), int(vence.split('-')[1]), int(vence.split('-')[2])) + duration.value(29, 'h');
+      }
+
+      function cumpleCondicion(cupon, datos) {
+        let condicion = cupon.get('condicion', '');
+        return (condicion != 'primeraCompra' || compras() == 0) &&
+          (condicion != 'masDeTresJuegos' || datos.entradas > 3) &&
+          (condicion != 'clienteFrecuente' || compras() >= comprasClienteFrecuente());
+      }
+
+      // Se lee el cupón ya con el uso de esta reserva sumado (el cliente no puede
+      // cambiar sus otros campos), así no hace falta leerlo dos veces.
+      function cuponAplicable(cupon, datos) {
+        return cupon.activo == true &&
+          vigente(cupon) &&
+          cumpleCondicion(cupon, datos) &&
+          cupon.get('ultimaReserva', '') == id &&
+          (cupon.get('usosMaximos', 0) == 0 || cupon.usos <= cupon.usosMaximos) &&
+          // "* 0.01" y no "/ 100": entre enteros, las reglas hacen división entera (50 * 15 / 100 = 7, no 7.5).
+          mismoMonto(datos.descuentoCupon, datos.subtotal * cupon.descuento * 0.01);
+      }
+
+      function cuponValido(datos) {
+        return (datos.cupon == null && datos.descuentoCupon == 0) ||
+          (datos.cupon is string &&
+            cuponAplicable(getAfter(/databases/$(database)/documents/cupones/$(datos.cupon)).data, datos));
+      }
+
+      // Al cambiar de fecha, el registro de aforo se mueve con ella. Las reservas
+      // del sistema anterior (sin "entradas") no tienen registro de aforo.
+      function aforoAlDia() {
+        return !('entradas' in resource.data) ||
+          getAfter(/databases/$(database)/documents/ocupacion/$(id)).data.fecha == request.resource.data.fecha;
+      }
+
+      // Pagar: solo cambia el estado de pago, y en la misma operación se crea
+      // la transacción con el mismo id por el total de la reserva (menos millas).
+      function pagoValido() {
+        let transaccion = getAfter(/databases/$(database)/documents/transacciones/$(id)).data;
+        return soloCambia(['pagado', 'estado', 'transaccionId', 'pagadoEn']) &&
+          request.resource.data.pagado == true &&
+          request.resource.data.estado == 'pagado' &&
+          request.resource.data.transaccionId == id &&
+          existsAfter(/databases/$(database)/documents/transacciones/$(id)) &&
+          mismoMonto(transaccion.total + transaccion.descuentoMillas, resource.data.total);
+      }
+
+      // Al quitar una reserva que apartó stock y cupón, se devuelven en la misma
+      // operación (salvo que el admin ya haya borrado el producto o el cupón).
+      function devueltoLinea(items, i) {
+        return i >= items.size() || !esBazar(items[i]) ||
+          !existsAfter(/databases/$(database)/documents/productos/$(idProducto(items[i]))) ||
+          productoDespues(items[i]).get('ultimaDevolucion', '') == id;
+      }
+
+      function apartadoDevuelto() {
+        let datos = resource.data;
+        return datos.get('apartado', false) != true || (
+          devueltoLinea(datos.items, 0) && devueltoLinea(datos.items, 1) && devueltoLinea(datos.items, 2) &&
+          devueltoLinea(datos.items, 3) && devueltoLinea(datos.items, 4) &&
+          (datos.cupon == null ||
+            !existsAfter(/databases/$(database)/documents/cupones/$(datos.cupon)) ||
+            getAfter(/databases/$(database)/documents/cupones/$(datos.cupon)).data.get('ultimaDevolucion', '') == id));
+      }
+
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.pagado == false
+        && request.resource.data.estado == 'pendiente'
+        && request.resource.data.apartado == true
+        && request.resource.data.subtotal is number
+        && request.resource.data.total is number
+        && request.resource.data.descuentoCupon is number
+        && request.resource.data.subtotal >= 0
+        && request.resource.data.entradas is int
+        && request.resource.data.entradas > 0
+        && itemsValidos(request.resource.data)
+        && existsAfter(/databases/$(database)/documents/ocupacion/$(id))
+        && cuponValido(request.resource.data)
+        && mismoMonto(request.resource.data.total, request.resource.data.subtotal - request.resource.data.descuentoCupon);
       allow read: if admin() || propia();
       // Una reserva pagada ya no la puede editar ni eliminar el cliente (solo el admin).
-      // Pagarla sí está permitido: en ese momento todavía figura como no pagada.
-      allow update: if admin() || (propia() && resource.data.pagado != true && request.resource.data.uid == resource.data.uid);
-      allow delete: if admin() || (propia() && resource.data.pagado != true);
+      allow update: if admin() || (propia() && resource.data.pagado != true && (
+        (soloCambia(['nombre', 'correo', 'telefono', 'fecha', 'actualizadoEn']) && aforoAlDia()) || pagoValido()
+      ));
+      // Al quitarla se borra también su registro de aforo, para no dejar cupos ocupados.
+      allow delete: if admin() || (propia() && resource.data.pagado != true
+        && !existsAfter(/databases/$(database)/documents/ocupacion/$(id))
+        && apartadoDevuelto());
     }
 
+    // Aforo público por fecha: solo fecha y cantidad de entradas, sin datos personales.
+    // Se crea, mueve y borra junto con su reserva (mismo id).
+    match /ocupacion/{id} {
+      function coincideConReserva() {
+        let datos = reservaDespues(id);
+        return request.resource.data.uid == request.auth.uid
+          && datos.uid == request.auth.uid
+          && datos.pagado != true
+          && request.resource.data.fecha == datos.fecha
+          && request.resource.data.entradas is int
+          && request.resource.data.entradas == datos.entradas;
+      }
+
+      allow read: if true;
+      allow create, update: if admin() || (signedIn() && existsAfter(/databases/$(database)/documents/reservas/$(id)) && coincideConReserva());
+      allow delete: if admin() || (signedIn() && resource.data.uid == request.auth.uid
+        && !existsAfter(/databases/$(database)/documents/reservas/$(id)));
+    }
+
+    // Transacción = comprobante de un pago aprobado. Su id es el de la reserva
+    // (una reserva no se cobra dos veces) y solo se crea junto con el pago y
+    // con el avance del contador de fidelidad del cliente.
     match /transacciones/{id} {
-      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.reservaId == id
+        && reserva(id).uid == request.auth.uid
+        && reserva(id).pagado == false
+        && reservaDespues(id).pagado == true
+        && request.resource.data.estado == 'aprobada'
+        && request.resource.data.total is number
+        && request.resource.data.total >= 0
+        && request.resource.data.millasUsadas is int
+        && request.resource.data.millasUsadas >= 0
+        && request.resource.data.millasUsadas % millasPorCanje() == 0
+        && request.resource.data.descuentoMillas == request.resource.data.millasUsadas / millasPorCanje() * solesPorCanje()
+        && request.resource.data.millasGanadas == math.floor(request.resource.data.total) * millasPorSol()
+        && getAfter(/databases/$(database)/documents/fidelidad/$(request.auth.uid)).data.ultimaTransaccion == id
+        && mismoMonto(request.resource.data.total + request.resource.data.descuentoMillas, reserva(id).total);
       allow read: if admin() || (signedIn() && resource.data.uid == request.auth.uid);
       allow update, delete: if admin();
     }
 
-    match /configuracion/{document} {
-      // Solo los administradores pueden editar la configuración
-      allow write: if signedIn() && (
-        request.auth.uid in ['G3yhr3oVJmZDqFgIkhDOINI6bWJ3', 'eSsCKeqTVGUJSg6Cq3brTGFTgP52', 'twsR7FgxkCOM3ozoP2FN5E7vFzL2', '3qElw9uNAKZwTNbEcHqlZMXnm053'] || admin()
-      );
+    // Contador de fidelidad de cada cliente: millas ganadas, millas usadas y
+    // compras pagadas. Las reglas no pueden sumar transacciones, así que este
+    // documento lleva la cuenta: solo avanza junto con una transacción nueva y
+    // por sus montos exactos, y las millas canjeadas deben salir del saldo que
+    // había antes del pago. El panel de admin lo recalcula desde las transacciones.
+    match /fidelidad/{uid} {
+      function pago() {
+        return getAfter(/databases/$(database)/documents/transacciones/$(request.resource.data.ultimaTransaccion)).data;
+      }
+
+      function pagoNuevo() {
+        return !exists(/databases/$(database)/documents/transacciones/$(request.resource.data.ultimaTransaccion)) &&
+          existsAfter(/databases/$(database)/documents/transacciones/$(request.resource.data.ultimaTransaccion)) &&
+          pago().uid == uid;
+      }
+
+      allow read: if ownUser(uid) || admin();
+      // Primer pago: no había saldo, así que no hay millas que canjear.
+      allow create: if admin() || (ownUser(uid) && pagoNuevo()
+        && request.resource.data.keys().hasOnly(['millasGanadas', 'millasUsadas', 'compras', 'ultimaTransaccion'])
+        && request.resource.data.millasGanadas == pago().millasGanadas
+        && request.resource.data.millasUsadas == 0
+        && pago().millasUsadas == 0
+        && request.resource.data.compras == 1);
+      allow update: if admin() || (ownUser(uid) && pagoNuevo()
+        && soloCambia(['millasGanadas', 'millasUsadas', 'compras', 'ultimaTransaccion'])
+        && request.resource.data.millasGanadas == resource.data.millasGanadas + pago().millasGanadas
+        && request.resource.data.millasUsadas == resource.data.millasUsadas + pago().millasUsadas
+        && request.resource.data.compras == resource.data.compras + 1
+        && resource.data.millasGanadas - resource.data.millasUsadas >= pago().millasUsadas);
+      allow delete: if admin();
+    }
+
+    // Cupones: los clientes los leen para aplicarlos. Solo pueden sumar 1 uso
+    // al crear una reserva con ese cupón (sin pasar del máximo) y restarlo al
+    // quitar esa reserva sin pagar.
+    match /cupones/{codigo} {
+      function usoApartado() {
+        let reservaId = request.resource.data.ultimaReserva;
+        return soloCambia(['usos', 'ultimaReserva']) &&
+          request.resource.data.usos == resource.data.get('usos', 0) + 1 &&
+          (resource.data.get('usosMaximos', 0) == 0 || request.resource.data.usos <= resource.data.usosMaximos) &&
+          reservaNueva(reservaId) &&
+          reservaDespues(reservaId).cupon == codigo;
+      }
+
+      function usoDevuelto() {
+        let reservaId = request.resource.data.ultimaDevolucion;
+        return soloCambia(['usos', 'ultimaDevolucion']) &&
+          request.resource.data.usos == resource.data.get('usos', 0) - 1 &&
+          reservaQuitada(reservaId) &&
+          reserva(reservaId).cupon == codigo;
+      }
+
+      allow read: if signedIn();
+      allow create, delete: if admin();
+      allow update: if admin() || (signedIn() && (usoApartado() || usoDevuelto()));
+    }
+
+    // Reseñas: una por cliente y producto (id "<producto>_<uid>"), de 1 a 5 estrellas.
+    match /resenas/{id} {
       allow read: if true;
+      allow create, update: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && id == request.resource.data.productoId + '_' + request.auth.uid
+        && request.resource.data.estrellas is int
+        && request.resource.data.estrellas >= 1
+        && request.resource.data.estrellas <= 5
+        && request.resource.data.comentario is string
+        && request.resource.data.comentario.size() <= 500;
+      allow delete: if admin() || (signedIn() && resource.data.uid == request.auth.uid);
+    }
+
+    // Solicitudes de cumpleaños y eventos: el cliente las envía y el admin las gestiona.
+    match /eventos/{id} {
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.estado == 'pendiente';
+      allow read: if admin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow update: if admin();
+      allow delete: if admin() || (signedIn() && resource.data.uid == request.auth.uid && resource.data.estado == 'pendiente');
+    }
+
+    match /configuracion/{document} {
+      allow read: if true;
+      allow write: if admin();
     }
 
     match /{document=**} {
