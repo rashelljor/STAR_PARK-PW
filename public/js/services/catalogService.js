@@ -28,7 +28,7 @@ export async function getProductById(id) {
 }
 
 // Quita tildes y mayúsculas: "Misión", "MISION" y "mision" se comparan igual.
-function normalizar(texto) {
+export function normalizar(texto) {
     return String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 }
 

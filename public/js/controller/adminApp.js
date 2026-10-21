@@ -8,7 +8,7 @@ import { notificar, confirmar, notificarAlCargar } from '../utils/notificaciones
 import { aNumero, fechaLegible, formatearPrecio } from '../utils/formatters.js'
 import { AFORO_POR_DEFECTO, CONDICIONES_CUPON, CUPONES_INICIALES, PAQUETES_EVENTO, PREFIJO_QR } from '../utils/constants.js'
 import { estadoAforo } from '../services/capacityService.js'
-import { coloresDe } from '../services/catalogService.js'
+import { coloresDe, normalizar } from '../services/catalogService.js'
 import { enviarCorreo } from '../services/mailService.js'
 import { totalesCompras, esReembolsada } from '../services/purchaseService.js'
 import { prepararImagen, indicacionImagen, formatosAceptados } from '../services/imageService.js'
@@ -143,6 +143,86 @@ function activarCampoImagen(formulario, tipo) {
 
 function botonAccion(coleccion, id, texto = 'Eliminar') {
     return `<button class="btn btn-sm btn-outline-danger" data-delete="${coleccion}" data-id="${id}">${texto}</button>`
+}
+
+// Códigos legibles (PRO-0001, SER-0005, CLI-0008...). Cada prefijo lleva su
+// contador en configuracion/contadores; un número no se reutiliza aunque se
+// borre el elemento. Devuelve los siguientes "cantidad" códigos del prefijo.
+async function reservarCodigos(prefijo, cantidad) {
+    const referencia = doc(db, 'configuracion', 'contadores')
+    const ultimo = await runTransaction(db, async transaccion => {
+        const actual = Number((await transaccion.get(referencia)).data()?.[prefijo]) || 0
+        transaccion.set(referencia, { [prefijo]: actual + cantidad }, { merge: true })
+        return actual
+    })
+    return Array.from({ length: cantidad }, (_, indice) => prefijo + '-' + String(ultimo + indice + 1).padStart(4, '0'))
+}
+
+// Da su código a los elementos que aún no lo tienen o cuyo prefijo ya no les
+// corresponde (un producto que pasó a servicio, un cliente que pasó a admin).
+// Los más antiguos reciben los números más bajos. Completa la lista recibida.
+async function asignarCodigos(coleccion, items, prefijoDe) {
+    const grupos = {}
+    items.filter(item => !String(item.codigo || '').startsWith(prefijoDe(item) + '-'))
+        .sort((a, b) => (a.creadoEn?.toMillis?.() || 0) - (b.creadoEn?.toMillis?.() || 0))
+        .forEach(item => { (grupos[prefijoDe(item)] ||= []).push(item) })
+    try {
+        await Promise.all(Object.entries(grupos).map(async ([prefijo, grupo]) => {
+            const codigos = await reservarCodigos(prefijo, grupo.length)
+            await Promise.all(grupo.map((item, indice) => {
+                item.codigo = codigos[indice]
+                return actualizar(coleccion, item.id, { codigo: item.codigo })
+            }))
+        }))
+    } catch (fallo) {
+        // Sin código la lista igual se muestra; se reintenta la próxima vez.
+        console.error('No se pudieron asignar los códigos de ' + coleccion + ':', fallo)
+    }
+    return items
+}
+
+function celdaCodigo(item) {
+    return `<td class="text-nowrap"><code>${escapar(item.codigo || '—')}</code></td>`
+}
+
+// Búsqueda sin tildes ni mayúsculas; con varias palabras deben aparecer todas.
+function coincide(termino, ...campos) {
+    const texto = normalizar(campos.join(' '))
+    return normalizar(termino).split(/\s+/).filter(Boolean).every(palabra => texto.includes(palabra))
+}
+
+// Las listas avanzan de 6 en 6 (de 3 en 3 en celular).
+const esCelularLista = window.matchMedia('(max-width: 576px)')
+const pasoLista = () => esCelularLista.matches ? 3 : 6
+
+// Deja ver solo la primera tanda de una lista (filas de una tabla o tarjetas),
+// con "Ver más" / "Ver menos" debajo. Devuelve mostrar(reiniciar), que se llama
+// tras cada dibujo; reiniciar vuelve a la primera tanda (al buscar o filtrar).
+function paginar(destino) {
+    const barra = document.createElement('div')
+    barra.className = 'd-flex flex-wrap align-items-center gap-2 mt-2'
+    ;(destino.closest('.table-responsive') || destino).after(barra)
+    let visibles = pasoLista()
+    const mostrar = (reiniciar = false) => {
+        const paso = pasoLista()
+        if (reiniciar) visibles = paso
+        const elementos = [...destino.children]
+        elementos.forEach((elemento, indice) => elemento.classList.toggle('d-none', indice >= visibles))
+        barra.innerHTML = elementos.length > paso ? `<span class="small text-white-50">Mostrando ${Math.min(visibles, elementos.length)} de ${elementos.length}</span>
+            ${visibles < elementos.length ? '<button type="button" class="btn btn-sm btn-outline-info" data-ver-mas>Ver más</button>' : ''}
+            ${visibles > paso ? '<button type="button" class="btn btn-sm btn-outline-light" data-ver-menos>Ver menos</button>' : ''}` : ''
+    }
+    barra.addEventListener('click', evento => {
+        const paso = pasoLista()
+        if (evento.target.closest('[data-ver-mas]')) visibles += paso
+        else if (evento.target.closest('[data-ver-menos]')) visibles = Math.max(paso, visibles - paso)
+        else return
+        mostrar()
+        // Al ver menos la lista se acorta: se sigue viendo el botón.
+        barra.scrollIntoView({ block: 'nearest' })
+    })
+    esCelularLista.addEventListener('change', () => mostrar(true))
+    return mostrar
 }
 
 // Tarjetas grandes del panel de control: ícono, título, cifra y un detalle debajo.
@@ -412,10 +492,19 @@ function panelCatalogo(elemento) {
             </div>
             <div class="mt-3 d-flex flex-wrap gap-2"><button class="btn btn-warning" id="guardarCatalogo">Agregar producto</button> <button type="button" class="btn btn-outline-light" id="limpiarCatalogo">Limpiar</button></div>
         </form>
-        <div class="glass p-4"><div class="table-responsive"><table class="table table-dark"><thead><tr><th>Nombre</th><th>Tipo</th><th>Precio</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tablaCatalogo"></tbody></table></div><button type="button" class="btn btn-outline-info btn-sm d-none" id="importarCatalogo">Importar los productos actuales de la tienda</button></div>`
+        <div class="glass p-4 mb-4">
+            <label class="text-white w-100" for="buscarCatalogo">Buscar en servicios, productos, cupones y paquetes</label>
+            <input class="form-control" type="search" id="buscarCatalogo" placeholder="Código, nombre, tipo o descripción (ej. PRO-0001, botín, BIENVENIDO15)" autocomplete="off">
+        </div>
+        <div class="glass p-4"><h2 class="h4 text-white">Lista de servicios (botín y promociones)</h2><div class="table-responsive"><table class="table table-dark"><thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Precio</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tablaServicios"><tr><td colspan="6">Cargando...</td></tr></tbody></table></div><button type="button" class="btn btn-outline-info btn-sm d-none" id="importarCatalogo">Importar los productos actuales de la tienda</button></div>
+        <div class="glass p-4 mt-4"><h2 class="h4 text-white">Lista de productos del bazar</h2><div class="table-responsive"><table class="table table-dark"><thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Precio</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tablaBazar"><tr><td colspan="6">Cargando...</td></tr></tbody></table></div></div>`
     const formulario = document.getElementById('formCatalogo')
-    const tabla = document.getElementById('tablaCatalogo')
+    const tablaServicios = document.getElementById('tablaServicios')
+    const tablaBazar = document.getElementById('tablaBazar')
     const importar = document.getElementById('importarCatalogo')
+    const buscador = document.getElementById('buscarCatalogo')
+    const mostrarServicios = paginar(tablaServicios)
+    const mostrarBazar = paginar(tablaBazar)
     // Stock y colores solo se piden para el bazar.
     const camposBazar = document.getElementById('camposBazar')
     const alternarBazar = () => {
@@ -452,7 +541,26 @@ function panelCatalogo(elemento) {
     importar.onclick = async () => { try { await Promise.all(PRODUCTOS_INICIALES.map(({ id, ...producto }) => crear('productos', producto))); await cargar(); notificar('Productos importados al catálogo.', 'exito') } catch (fallo) { console.error(fallo); notificar('No se pudieron importar los productos: ' + fallo.message, 'error') } }
     const circulo = color => `<span class="d-inline-block rounded-circle align-middle border border-light" style="width: 14px; height: 14px; background: ${escapar(color)}" title="${escapar(color)}"></span>`
     const tipoDe = producto => escapar(CATEGORIAS_PRODUCTO[producto.categoria] || producto.categoria) + (producto.categoria === 'bazar' ? `<div class="small text-white-50 d-flex flex-wrap align-items-center gap-1">Stock: ${Number(producto.stock) || 0}${coloresDe(producto).length ? ' · ' + coloresDe(producto).map(circulo).join('') : ''}</div>` : '')
-    const cargar = () => listar('productos').then(productos => { importar.classList.toggle('d-none', productos.length > 0); tabla.innerHTML = productos.map(producto => `<tr><td>${escapar(producto.nombre)}</td><td>${tipoDe(producto)}</td><td>S/ ${Number(producto.precio || 0).toFixed(2)}</td><td>${escapar(producto.estado || 'Activo')}</td><td><div class="d-flex flex-wrap gap-2"><button class="btn btn-sm btn-outline-info" data-edit="${producto.id}">Editar</button> ${botonAccion('productos', producto.id)} <a class="btn btn-sm btn-outline-warning" href="../users/tienda.html#producto-${producto.id}" target="_blank" rel="noopener" title="Abre la tienda en una pestaña nueva, en este producto">Ver en tienda ↗</a></div></td></tr>`).join('') }).catch(errorDeCarga)
+    const fila = producto => `<tr>${celdaCodigo(producto)}<td>${escapar(producto.nombre)}</td><td>${tipoDe(producto)}</td><td>S/ ${Number(producto.precio || 0).toFixed(2)}</td><td>${escapar(producto.estado || 'Activo')}</td><td><div class="d-flex flex-wrap gap-2"><button class="btn btn-sm btn-outline-info" data-edit="${producto.id}">Editar</button> ${botonAccion('productos', producto.id)} <a class="btn btn-sm btn-outline-warning" href="../users/tienda.html#producto-${producto.id}" target="_blank" rel="noopener" title="Abre la tienda en una pestaña nueva, en este producto">Ver en tienda ↗</a></div></td></tr>`
+    // Servicios (promociones y botín) y productos del bazar van en tablas separadas.
+    // Los del bazar llevan código PRO-0000 y los servicios, SER-0000.
+    let productos = []
+    const dibujar = (reiniciar = false) => {
+        const encontrados = productos.filter(producto => coincide(buscador.value, producto.codigo, producto.nombre, producto.descripcion, CATEGORIAS_PRODUCTO[producto.categoria]))
+        const tabla = (filas, vacio) => filas.length ? filas.map(fila).join('') : `<tr><td colspan="6">${buscador.value.trim() ? 'Nada coincide con la búsqueda.' : vacio}</td></tr>`
+        tablaServicios.innerHTML = tabla(encontrados.filter(producto => producto.categoria !== 'bazar'), 'Aún no hay servicios.')
+        tablaBazar.innerHTML = tabla(encontrados.filter(producto => producto.categoria === 'bazar'), 'Aún no hay productos del bazar.')
+        mostrarServicios(reiniciar)
+        mostrarBazar(reiniciar)
+    }
+    buscador.addEventListener('input', () => dibujar(true))
+    const cargar = () => listar('productos')
+        .then(lista => asignarCodigos('productos', lista, producto => producto.categoria === 'bazar' ? 'PRO' : 'SER'))
+        .then(lista => {
+            productos = lista
+            importar.classList.toggle('d-none', productos.length > 0)
+            dibujar()
+        }).catch(errorDeCarga)
     formulario.addEventListener('submit', async evento => {
         evento.preventDefault()
         const datos = Object.fromEntries(new FormData(formulario))
@@ -470,24 +578,26 @@ function panelCatalogo(elemento) {
         try { id ? await actualizar('productos', id, datos) : await crear('productos', datos); formulario.reset(); await cargar(); notificar(id ? 'Producto actualizado.' : 'Producto agregado al catálogo.', 'exito') } catch (fallo) { console.error(fallo); notificar('No se pudo guardar el producto: ' + fallo.message, 'error') }
     })
     document.getElementById('limpiarCatalogo').onclick = () => formulario.reset()
-    tabla.addEventListener('click', async evento => { const boton = evento.target.closest('[data-delete], [data-edit]'); if (!boton) return; if (boton.dataset.delete) { if (!await confirmar('¿Eliminar este producto del catálogo?', { textoConfirmar: 'Eliminar', tipo: 'error' })) return; try { await eliminar(boton.dataset.delete, boton.dataset.id); notificar('Producto eliminado.', 'exito') } catch (fallo) { console.error(fallo); notificar('No se pudo eliminar el producto: ' + fallo.message, 'error') } } else { const producto = (await listar('productos')).find(item => item.id === boton.dataset.edit); formulario.reset(); Object.entries(producto).forEach(([clave, valor]) => { if (formulario.elements[clave]) formulario.elements[clave].value = valor }); formulario.elements.id.value = producto.id; mostrarImagen(producto.imagen); dibujarColores(coloresDe(producto)); alternarBazar(); modoEdicion(true); formulario.scrollIntoView({ behavior: 'smooth' }) } await cargar() })
+    const alHacerClic = async evento => { const boton = evento.target.closest('[data-delete], [data-edit]'); if (!boton) return; if (boton.dataset.delete) { if (!await confirmar('¿Eliminar este producto del catálogo?', { textoConfirmar: 'Eliminar', tipo: 'error' })) return; try { await eliminar(boton.dataset.delete, boton.dataset.id); notificar('Producto eliminado.', 'exito') } catch (fallo) { console.error(fallo); notificar('No se pudo eliminar el producto: ' + fallo.message, 'error') } } else { const producto = (await listar('productos')).find(item => item.id === boton.dataset.edit); formulario.reset(); Object.entries(producto).forEach(([clave, valor]) => { if (formulario.elements[clave]) formulario.elements[clave].value = valor }); formulario.elements.id.value = producto.id; mostrarImagen(producto.imagen); dibujarColores(coloresDe(producto)); alternarBazar(); modoEdicion(true); formulario.scrollIntoView({ behavior: 'smooth' }) } await cargar() }
+    tablaServicios.addEventListener('click', alHacerClic)
+    tablaBazar.addEventListener('click', alHacerClic)
     cargar()
-
-    const paquetes = document.createElement('section')
-    paquetes.className = 'glass p-4 mt-4'
-    elemento.appendChild(paquetes)
-    seccionPaquetes(paquetes)
 
     const cupones = document.createElement('section')
     cupones.className = 'glass p-4 mt-4'
     elemento.appendChild(cupones)
-    seccionCupones(cupones)
+    seccionCupones(cupones, buscador)
+
+    const paquetes = document.createElement('section')
+    paquetes.className = 'glass p-4 mt-4'
+    elemento.appendChild(paquetes)
+    seccionPaquetes(paquetes, buscador)
 }
 
 // Paquetes de cumpleaños (colección "paquetes"). Mientras no haya ninguno guardado,
 // el sitio usa los de constants.js; al editar o borrar el primero, se guardan
 // todos para que la página de cumpleaños no pierda los demás.
-function seccionPaquetes(contenedor) {
+function seccionPaquetes(contenedor, buscador) {
     contenedor.innerHTML = `
         <h2 class="h4 text-white">🎂 Paquetes de cumpleaños</h2>
         <p class="text-white-50">Se muestran en la página de cumpleaños y en el costado de la tienda. El precio es referencial, por niño.</p>
@@ -503,7 +613,7 @@ function seccionPaquetes(contenedor) {
                 <button type="button" class="btn btn-outline-light" data-limpiar>Limpiar</button>
             </div>
         </form>
-        <div class="table-responsive"><table class="table table-dark"><thead><tr><th>Paquete</th><th>Precio por niño</th><th>Incluye</th><th>Acciones</th></tr></thead><tbody id="tablaPaquetes"></tbody></table></div>
+        <div class="table-responsive"><table class="table table-dark"><thead><tr><th>Código</th><th>Paquete</th><th>Precio por niño</th><th>Incluye</th><th>Acciones</th></tr></thead><tbody id="tablaPaquetes"></tbody></table></div>
         <p class="small text-white-50 d-none" id="paquetesPorDefecto">Estos son los paquetes por defecto del sitio. Al guardar un cambio quedarán guardados en Firestore.</p>`
 
     const formulario = contenedor.querySelector('#formPaquete')
@@ -517,19 +627,31 @@ function seccionPaquetes(contenedor) {
     formulario.addEventListener('reset', () => { formulario.elements.id.value = ''; modoEdicion(false) })
     formulario.querySelector('[data-limpiar]').onclick = () => formulario.reset()
 
-    const cargar = () => listar('paquetes').then(paquetes => {
-        porDefecto = !paquetes.length
-        lista = (porDefecto ? PAQUETES_EVENTO : paquetes).slice().sort((a, b) => Number(a.precioPorNino) - Number(b.precioPorNino))
-        avisoPorDefecto.classList.toggle('d-none', !porDefecto)
-        tabla.innerHTML = lista.length ? lista.map(paquete => `<tr>
+    // Los paquetes por defecto no tienen código (PAQ-0000) hasta guardarse en Firestore.
+    const mostrar = paginar(tabla)
+    const dibujar = (reiniciar = false) => {
+        const encontrados = lista.filter(paquete => coincide(buscador.value, paquete.codigo, paquete.nombre, paquete.detalle))
+        tabla.innerHTML = encontrados.length ? encontrados.map(paquete => `<tr>
+            ${celdaCodigo(paquete)}
             <td><strong>${escapar(paquete.nombre)}</strong></td>
             <td>${formatearPrecio(paquete.precioPorNino)}</td>
             <td>${escapar(paquete.detalle)}</td>
             <td><div class="d-flex flex-wrap gap-2">
                 <button class="btn btn-sm btn-outline-info" data-editar="${escapar(paquete.id)}">Editar</button>
                 <button class="btn btn-sm btn-outline-danger" data-borrar="${escapar(paquete.id)}">Eliminar</button>
-            </div></td></tr>`).join('') : '<tr><td colspan="4">Aún no hay paquetes.</td></tr>'
-    }).catch(errorDeCarga)
+            </div></td></tr>`).join('') : `<tr><td colspan="5">${lista.length ? 'Ningún paquete coincide con la búsqueda.' : 'Aún no hay paquetes.'}</td></tr>`
+        mostrar(reiniciar)
+    }
+    buscador.addEventListener('input', () => dibujar(true))
+
+    const cargar = () => listar('paquetes')
+        .then(paquetes => asignarCodigos('paquetes', paquetes, () => 'PAQ'))
+        .then(paquetes => {
+            porDefecto = !paquetes.length
+            lista = (porDefecto ? PAQUETES_EVENTO : paquetes).slice().sort((a, b) => Number(a.precioPorNino) - Number(b.precioPorNino))
+            avisoPorDefecto.classList.toggle('d-none', !porDefecto)
+            dibujar()
+        }).catch(errorDeCarga)
 
     // Guarda en Firestore los paquetes por defecto (con su id actual) antes del primer cambio.
     const guardarPorDefecto = async () => {
@@ -588,7 +710,7 @@ function seccionPaquetes(contenedor) {
 
 // Cupones de descuento: el id del documento es el código en mayúsculas
 // (así el cliente lo busca directo y no se repiten códigos).
-function seccionCupones(contenedor) {
+function seccionCupones(contenedor, buscador) {
     contenedor.innerHTML = `
         <h2 class="h4 text-white">Cupones de descuento</h2>
         <p class="text-white-50">El cliente los aplica en su carrito. La condición se valida al aplicarlo; los usos se cuentan al pagar.</p>
@@ -622,10 +744,10 @@ function seccionCupones(contenedor) {
     formulario.addEventListener('reset', () => modoEdicion(false))
     formulario.querySelector('[data-limpiar]').onclick = () => formulario.reset()
 
-    const cargar = () => listar('cupones', 'codigo').then(cupones => {
-        lista = cupones
-        importar.classList.toggle('d-none', cupones.length > 0)
-        tabla.innerHTML = cupones.length ? cupones.map(cupon => `<tr>
+    const mostrar = paginar(tabla)
+    const dibujar = (reiniciar = false) => {
+        const encontrados = lista.filter(cupon => coincide(buscador.value, cupon.id, cupon.descripcion, CONDICIONES_CUPON[cupon.condicion]))
+        tabla.innerHTML = encontrados.length ? encontrados.map(cupon => `<tr>
             <td><strong>${escapar(cupon.id)}</strong><div class="small text-white-50">${escapar(cupon.descripcion)}</div></td>
             <td>${escapar(cupon.descuento)} %</td>
             <td>${escapar(CONDICIONES_CUPON[cupon.condicion] || cupon.condicion)}</td>
@@ -636,7 +758,15 @@ function seccionCupones(contenedor) {
                 <button class="btn btn-sm btn-outline-info" data-editar="${escapar(cupon.id)}">Editar</button>
                 <button class="btn btn-sm btn-outline-warning" data-alternar="${escapar(cupon.id)}">${cupon.activo ? 'Pausar' : 'Activar'}</button>
                 <button class="btn btn-sm btn-outline-danger" data-borrar="${escapar(cupon.id)}">Eliminar</button>
-            </div></td></tr>`).join('') : '<tr><td colspan="7">Aún no hay cupones.</td></tr>'
+            </div></td></tr>`).join('') : `<tr><td colspan="7">${lista.length ? 'Ningún cupón coincide con la búsqueda.' : 'Aún no hay cupones.'}</td></tr>`
+        mostrar(reiniciar)
+    }
+    buscador.addEventListener('input', () => dibujar(true))
+
+    const cargar = () => listar('cupones', 'codigo').then(cupones => {
+        lista = cupones
+        importar.classList.toggle('d-none', cupones.length > 0)
+        dibujar()
     }).catch(errorDeCarga)
 
     importar.onclick = async () => {
@@ -769,7 +899,7 @@ function panelReservas(elemento) {
         <section class="glass p-4" id="eventos">
             <h2 class="h4 text-white">🎂 Solicitudes de cumpleaños y eventos <span class="badgeTu align-middle" id="cantidadEventos"></span></h2>
             <p class="text-white-50" id="resumenEventos"></p>
-            <div class="table-responsive"><table class="table table-dark"><thead><tr><th>Evento</th><th>Fecha</th><th>Niños</th><th>Paquete</th><th>Contacto</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tablaEventos"><tr><td colspan="7">Cargando...</td></tr></tbody></table></div>
+            <div class="table-responsive"><table class="table table-dark"><thead><tr><th>Código</th><th>Evento</th><th>Fecha</th><th>Niños</th><th>Paquete</th><th>Contacto</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tablaEventos"><tr><td colspan="8">Cargando...</td></tr></tbody></table></div>
         </section>`
 
     let reservas = []
@@ -779,6 +909,8 @@ function panelReservas(elemento) {
     const filtro = document.getElementById('filtroPagadas')
     const filtroPendientes = document.getElementById('filtroPendientes')
     const resultado = document.getElementById('resultadoValidacion')
+    const mostrarPendientes = paginar(tablaPendientes)
+    const mostrarPagadas = paginar(tablaPagadas)
 
     const codigoDe = id => id.slice(-8).toUpperCase()
     // Orden de registro (fechaRegistro), la más reciente primero. Las reservas
@@ -795,7 +927,7 @@ function panelReservas(elemento) {
         <td>${formatearPrecio(reserva.total)}${reserva.cupon ? `<div class="small text-white-50">Cupón ${escapar(reserva.cupon)}</div>` : ''}</td>`
 
     const plural = (cantidad, singular, varias) => cantidad + ' ' + (cantidad === 1 ? singular : varias)
-    const dibujarReservas = () => {
+    const dibujarReservas = (reiniciar = false) => {
         const canceladas = reservas.filter(reserva => reserva.estado === 'cancelada')
         const sinPagar = reservas.filter(reserva => !reserva.pagado)
         const pendientes = [...sinPagar, ...canceladas]
@@ -824,9 +956,11 @@ function panelReservas(elemento) {
                 <td>${pago ? `${escapar(pago.tarjeta ? pago.tarjeta.marca + ' •••• ' + pago.tarjeta.ultimos4 : 'Validada')}${pago.codigoAutorizacion ? `<div class="small text-white-50">Aut. ${escapar(pago.codigoAutorizacion)}</div>` : ''}` : '—'}</td>
             </tr>`
         }).join('') : '<tr><td colspan="9">No hay reservas pagadas con este filtro.</td></tr>'
+        mostrarPendientes(reiniciar)
+        mostrarPagadas(reiniciar)
     }
-    filtro.onchange = dibujarReservas
-    filtroPendientes.onchange = dibujarReservas
+    filtro.onchange = () => dibujarReservas(true)
+    filtroPendientes.onchange = () => dibujarReservas(true)
 
     const cargarReservas = () => Promise.all([listar('reservas'), listar('transacciones')]).then(([lista, pagos]) => {
         reservas = lista
@@ -912,12 +1046,14 @@ function panelReservas(elemento) {
     // Eventos: el admin confirma o rechaza; el cliente ve el estado en su página.
     const tablaEventos = document.getElementById('tablaEventos')
     let eventos = []
-    const cargarEventos = () => listar('eventos', 'fecha').then(lista => {
+    const mostrarEventos = paginar(tablaEventos)
+    const cargarEventos = () => listar('eventos', 'fecha').then(lista => asignarCodigos('eventos', lista, () => 'EVE')).then(lista => {
         eventos = lista
         const porEstado = estado => lista.filter(item => item.estado === estado).length
         document.getElementById('cantidadEventos').textContent = lista.length
         document.getElementById('resumenEventos').innerHTML = `<strong class="text-warning">${porEstado('pendiente')} pendientes</strong> · <strong class="text-success">${porEstado('confirmado')} confirmados</strong> · ${porEstado('rechazado')} rechazados · ${lista.reduce((suma, item) => suma + (Number(item.ninos) || 0), 0)} niños en total`
         tablaEventos.innerHTML = lista.length ? lista.map(evento => `<tr>
+            ${celdaCodigo(evento)}
             <td><strong>${escapar(evento.cumpleanero)}</strong>${evento.edad ? ` (${escapar(evento.edad)} años)` : ''}${evento.comentarios ? `<div class="small text-white-50">${escapar(evento.comentarios)}</div>` : ''}</td>
             <td>${escapar(evento.fecha)} ${escapar(evento.hora)}</td>
             <td>${escapar(evento.ninos)}</td>
@@ -928,7 +1064,8 @@ function panelReservas(elemento) {
                 ${evento.estado !== 'confirmado' ? `<button class="btn btn-sm btn-outline-success" data-estado="confirmado" data-id="${evento.id}">Confirmar</button>` : ''}
                 ${evento.estado !== 'rechazado' ? `<button class="btn btn-sm btn-outline-warning" data-estado="rechazado" data-id="${evento.id}">Rechazar</button>` : ''}
                 <button class="btn btn-sm btn-outline-danger" data-borrar="${evento.id}">Eliminar</button>
-            </div></td></tr>`).join('') : '<tr><td colspan="7">Aún no hay solicitudes.</td></tr>'
+            </div></td></tr>`).join('') : '<tr><td colspan="8">Aún no hay solicitudes.</td></tr>'
+        mostrarEventos()
     }).catch(errorDeCarga)
 
     tablaEventos.addEventListener('click', async evento => {
@@ -1011,6 +1148,7 @@ function seccionLista(contenedor, { coleccion, titulo, nuevo, campos, iniciales,
 
     const formulario = contenedor.querySelector('[data-form]')
     const lista = contenedor.querySelector('[data-lista]')
+    const mostrar = paginar(lista)
     let items = []
     const campoDeImagen = campos.find(campo => campo.imagen)
     const mostrarImagen = campoDeImagen ? activarCampoImagen(formulario, campoDeImagen.imagen) : null
@@ -1030,6 +1168,7 @@ function seccionLista(contenedor, { coleccion, titulo, nuevo, campos, iniciales,
     const dibujar = () => {
         if (!items.length) {
             lista.innerHTML = `<p class="text-white-50">Aún no hay elementos. Lo que agregues aparecerá en el index.</p><button type="button" class="btn btn-outline-info btn-sm" data-importar>Importar los ${iniciales.length} actuales del index</button>`
+            mostrar()
             return
         }
         lista.innerHTML = items.map(item => `
@@ -1042,6 +1181,7 @@ function seccionLista(contenedor, { coleccion, titulo, nuevo, campos, iniciales,
                 <button type="button" class="btn btn-sm btn-outline-info" data-edit="${item.id}">Editar</button>
                 <button type="button" class="btn btn-sm btn-outline-danger" data-delete="${item.id}">Borrar</button>
             </div>`).join('')
+        mostrar()
     }
 
     escuchar(coleccion, docs => {
@@ -1150,17 +1290,21 @@ function panelContenido(elemento) {
 }
 
 function panelUsuarios(elemento) {
-    elemento.innerHTML = `<h1 class="text-white">Control de usuarios y roles</h1><div class="glass p-4"><div class="table-responsive"><table class="table table-dark"><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Acciones</th></tr></thead><tbody id="tablaUsuarios"></tbody></table></div></div>`
+    elemento.innerHTML = `<h1 class="text-white">Control de usuarios y roles</h1><div class="glass p-4"><div class="table-responsive"><table class="table table-dark"><thead><tr><th>Código</th><th>Nombre</th><th>Correo</th><th>Rol</th><th>Acciones</th></tr></thead><tbody id="tablaUsuarios"><tr><td colspan="5">Cargando...</td></tr></tbody></table></div></div>`
     const tabla = document.getElementById('tablaUsuarios')
+    const mostrar = paginar(tabla)
     // El selector funciona en ambos sentidos (admin ↔ cliente), salvo en la fila del
     // propio administrador: no puede quitarse su rol (también lo impiden las reglas de Firestore).
     const filaUsuario = usuario => {
         const esPropio = usuario.id === auth.currentUser.uid
         const selector = `<select class="form-select form-select-sm" data-role="${usuario.id}" ${esPropio ? 'disabled title="No puedes cambiar tu propio rol"' : ''} aria-label="Rol de ${escapar(usuario.correo)}"><option value="admin" ${usuario.rol === 'admin' ? 'selected' : ''}>admin</option><option value="cliente" ${usuario.rol !== 'admin' ? 'selected' : ''}>cliente</option></select>`
-        return `<tr><td>${escapar(usuario.nombreCompleto || usuario.nombreUsuario)}${esPropio ? ' <span class="badgeTu">tú</span>' : ''}</td><td>${escapar(usuario.correo)}</td><td>${selector}${esPropio ? '<div class="small text-white-50 mt-1">No puedes quitarte tu propio rol.</div>' : ''}</td><td>${usuario.rol === 'admin' ? '' : botonAccion('usuarios', usuario.id)}</td></tr>`
+        return `<tr>${celdaCodigo(usuario)}<td>${escapar(usuario.nombreCompleto || usuario.nombreUsuario)}${esPropio ? ' <span class="badgeTu">tú</span>' : ''}</td><td>${escapar(usuario.correo)}</td><td>${selector}${esPropio ? '<div class="small text-white-50 mt-1">No puedes quitarte tu propio rol.</div>' : ''}</td><td>${usuario.rol === 'admin' ? '' : botonAccion('usuarios', usuario.id)}</td></tr>`
     }
     let lista = []
-    const cargar = () => listar('usuarios').then(usuarios => { lista = usuarios; tabla.innerHTML = usuarios.map(filaUsuario).join('') }).catch(errorDeCarga)
+    // Clientes con código CLI-0000 y administradores con ADM-0000 (cambia junto con el rol).
+    const cargar = () => listar('usuarios')
+        .then(usuarios => asignarCodigos('usuarios', usuarios, usuario => usuario.rol === 'admin' ? 'ADM' : 'CLI'))
+        .then(usuarios => { lista = usuarios; tabla.innerHTML = usuarios.map(filaUsuario).join(''); mostrar() }).catch(errorDeCarga)
     // Las cuentas creadas antes del login por nombre de usuario aún no lo tienen
     // registrado: se completa aquí para que todas puedan entrar con él.
     listar('usuarios').then(usuarios => Promise.allSettled(usuarios.map(usuario => asegurarNombreUsuario(usuario.id, usuario))))
@@ -1202,6 +1346,7 @@ function seccionPreguntas(contenedor) {
         <p class="text-white-50">Las sin responder primero. La respuesta le llega al cliente a su bandeja de entrada.</p>
         <div data-lista><p class="text-white-50">Cargando...</p></div>`
     const lista = contenedor.querySelector('[data-lista]')
+    const mostrar = paginar(lista)
     let items = []
 
     const cargar = () => listar('preguntas', 'fecha').then(todas => {
@@ -1220,6 +1365,7 @@ function seccionPreguntas(contenedor) {
                     <button type="button" class="btn btn-sm btn-outline-danger" data-borrar>Eliminar</button>
                 </div>
             </form>`).join('') : '<p class="text-white-50">Aún no hay preguntas.</p>'
+        mostrar()
     }).catch(errorDeCarga)
 
     lista.addEventListener('submit', async evento => {
