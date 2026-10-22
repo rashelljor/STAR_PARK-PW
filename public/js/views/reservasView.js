@@ -9,6 +9,7 @@
 
 import Header from '../components/Header.js'
 import Footer from '../components/Footer.js'
+import VerMas from '../components/VerMas.js'
 import CalendarioAforo from '../components/CalendarioAforo.js'
 import EntradaQR from '../components/EntradaQR.js'
 import { obtenerReservas, actualizarReserva, eliminarReserva, entradasDe, esCancelable, cancelarReserva } from '../services/bookingService.js'
@@ -22,7 +23,7 @@ import { rangoFechasReserva, erroresDatosReserva } from '../utils/validators.js'
 
 export default {
 
-    components: { Header, Footer, CalendarioAforo, EntradaQR },
+    components: { Header, Footer, CalendarioAforo, EntradaQR, VerMas },
 
     data() {
         return {
@@ -214,7 +215,8 @@ export default {
                         <p>Aún no tienes reservas.</p>
                         <a class="btn botonAmarillo" href="tienda.html">Ir a la tienda</a>
                     </div>
-                    <div v-else class="bloqueAdmin">
+                    <VerMas v-else :items="reservas" v-slot="{ visibles }">
+                    <div class="bloqueAdmin">
                         <!-- data-label da el título de cada dato cuando la fila se convierte en tarjeta. -->
                         <table class="tablaReservas">
                             <thead>
@@ -231,7 +233,7 @@ export default {
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="(reserva, indice) in reservas" :key="reserva.id" :class="{ filaPagada: reserva.pagado }">
+                                <tr v-for="(reserva, indice) in visibles" :key="reserva.id" :class="{ filaPagada: reserva.pagado }">
                                     <td data-label="Reserva" class="celdaNumero">#{{ reservas.length - indice }}</td>
                                     <td data-label="Nombre">{{ reserva.nombre }}</td>
                                     <td data-label="Correo" class="celdaCorreo">{{ reserva.correo }}</td>
@@ -266,6 +268,7 @@ export default {
                             </tbody>
                         </table>
                     </div>
+                    </VerMas>
                 </div>
             </main>
 

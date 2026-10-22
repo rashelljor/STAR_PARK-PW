@@ -8,6 +8,7 @@
 
 import Header, { EVENTO_PERFIL } from '../components/Header.js'
 import Footer from '../components/Footer.js'
+import VerMas from '../components/VerMas.js'
 import { db } from '../config/firebaseConfig.js'
 import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
 import { esperarUsuario, obtenerPerfil, guardarFotoPerfil } from '../services/authService.js'
@@ -44,7 +45,7 @@ const tarjetaVacia = () => ({ id: null, numero: '', titular: '', vencimiento: ''
 
 export default {
 
-    components: { Header, Footer },
+    components: { Header, Footer, VerMas },
 
     data() {
         return {
@@ -465,8 +466,9 @@ export default {
                             <button v-if="noLeidas" type="button" class="botonEditar" @click="leerTodas">Marcar todo como leído</button>
                         </div>
                         <p v-if="!notificaciones.length" class="etiquetaGris mb-0">No tienes mensajes por ahora. Aquí llegarán tus reembolsos y las respuestas a tus preguntas.</p>
-                        <ul v-else class="list-unstyled mb-0">
-                            <li v-for="notificacion in notificaciones" :key="notificacion.id" class="d-flex gap-3 py-3 border-bottom" :style="notificacion.leida ? { opacity: 0.7 } : null" @click="leer(notificacion)">
+                        <VerMas v-else :items="notificaciones" v-slot="{ visibles }">
+                        <ul class="list-unstyled mb-0">
+                            <li v-for="notificacion in visibles" :key="notificacion.id" class="d-flex gap-3 py-3 border-bottom" :style="notificacion.leida ? { opacity: 0.7 } : null" @click="leer(notificacion)">
                                 <span class="fs-3" aria-hidden="true">{{ iconoNotificacion(notificacion) }}</span>
                                 <div class="flex-grow-1">
                                     <p class="mb-1 text-white">
@@ -482,6 +484,7 @@ export default {
                                 </div>
                             </li>
                         </ul>
+                        </VerMas>
                     </section>
                 </template>
             </main>
@@ -540,37 +543,43 @@ export default {
                         </form>
                         <h3 class="h6 celeste mt-4">Mis preguntas</h3>
                         <p v-if="!preguntas.length" class="etiquetaGris">Aún no has enviado preguntas.</p>
-                        <div v-for="pregunta in preguntas" :key="pregunta.id" class="border-bottom py-2">
+                        <VerMas :items="preguntas" v-slot="{ visibles }">
+                        <div v-for="pregunta in visibles" :key="pregunta.id" class="border-bottom py-2">
                             <p class="mb-1 text-white">{{ pregunta.pregunta }}</p>
                             <span class="estadoReserva" :class="pregunta.estado === 'respondida' ? 'estadoPagada' : 'estadoPendiente'">{{ pregunta.estado === 'respondida' ? '✓ Respondida' : 'Esperando respuesta' }}</span>
                             <p v-if="pregunta.respuesta" class="mt-2 mb-1"><strong class="celeste">Star Park:</strong> {{ pregunta.respuesta }}</p>
                             <button type="button" class="btn btn-link btn-sm p-0 ms-2 celeste" @click="borrarPregunta(pregunta)">Eliminar</button>
                         </div>
+                        </VerMas>
                     </div>
 
                     <!-- Opiniones: las reseñas propias de los productos de la tienda. -->
                     <div v-else-if="ventana === 'opiniones'">
                         <p v-if="!resenas.length" class="etiquetaGris">Aún no has opinado. Puedes calificar los productos desde la tienda.</p>
-                        <div v-for="resena in resenas" :key="resena.id" class="border-bottom py-2">
+                        <VerMas :items="resenas" v-slot="{ visibles }">
+                        <div v-for="resena in visibles" :key="resena.id" class="border-bottom py-2">
                             <p class="mb-1 text-white"><strong>{{ productos[resena.productoId] || 'Producto retirado' }}</strong></p>
                             <p class="mb-1 amarillo" :aria-label="resena.estrellas + ' de 5 estrellas'">{{ estrellas(resena.estrellas) }}</p>
                             <p v-if="resena.comentario" class="mb-1">{{ resena.comentario }}</p>
                             <small class="etiquetaGris">{{ fechaLegible(resena.fecha) }}</small>
                             <button type="button" class="btn btn-link btn-sm p-0 ms-2 celeste" @click="borrarResena(resena)">Eliminar</button>
                         </div>
+                        </VerMas>
                         <a class="btn botonCelesteBorde mt-3" href="tienda.html">Ir a la tienda</a>
                     </div>
 
                     <!-- Favoritos: atracciones (juegos) marcadas con ♥. -->
                     <div v-else-if="ventana === 'favoritos'">
                         <p class="etiquetaGris">{{ favoritos.length ? 'Tienes ' + favoritos.length + ' juego(s) favorito(s).' : 'Toca ♡ para guardar tus juegos favoritos.' }}</p>
-                        <div v-for="atraccion in atracciones" :key="atraccion.id" class="d-flex align-items-center gap-3 border-bottom py-2">
+                        <VerMas :items="atracciones" v-slot="{ visibles }">
+                        <div v-for="atraccion in visibles" :key="atraccion.id" class="d-flex align-items-center gap-3 border-bottom py-2">
                             <img :src="atraccion.imagen || '../../assets/img/logostar.png'" alt="" style="width: 64px; height: 48px; object-fit: cover; border-radius: 6px">
                             <span class="flex-grow-1 text-white">{{ atraccion.nombre }}</span>
                             <button type="button" class="btn btn-sm rounded-pill" :class="esFavorito(atraccion) ? 'btn-danger' : 'btn-outline-light'"
                                 :aria-pressed="esFavorito(atraccion)" :aria-label="(esFavorito(atraccion) ? 'Quitar de' : 'Agregar a') + ' favoritos: ' + atraccion.nombre"
                                 @click="alternarFavorito(atraccion)">{{ esFavorito(atraccion) ? '♥' : '♡' }}</button>
                         </div>
+                        </VerMas>
                     </div>
 
                     <!-- Tarjetas guardadas (editables). Del número solo se guardan los últimos 4 dígitos. -->
@@ -601,7 +610,8 @@ export default {
                         </form>
                         <template v-else>
                             <p v-if="!tarjetas.length" class="etiquetaGris">No tienes tarjetas guardadas.</p>
-                            <div v-for="item in tarjetas" :key="item.id" class="d-flex flex-wrap align-items-center gap-2 border-bottom py-2">
+                            <VerMas :items="tarjetas" v-slot="{ visibles }">
+                            <div v-for="item in visibles" :key="item.id" class="d-flex flex-wrap align-items-center gap-2 border-bottom py-2">
                                 <div class="flex-grow-1">
                                     <p class="mb-0 text-white"><strong>{{ item.marca }} •••• {{ item.ultimos4 }}</strong><span v-if="item.alias" class="etiquetaGris"> · {{ item.alias }}</span></p>
                                     <small class="etiquetaGris">{{ item.titular }} · vence {{ item.vencimiento }}</small>
@@ -609,6 +619,7 @@ export default {
                                 <button type="button" class="botonEditar" @click="editarTarjeta(item)">Editar</button>
                                 <button type="button" class="botonEliminar" @click="borrarTarjeta(item)">Eliminar</button>
                             </div>
+                            </VerMas>
                             <button type="button" class="btn botonAmarillo mt-3" @click="nuevaTarjeta">+ Agregar tarjeta</button>
                         </template>
                     </div>

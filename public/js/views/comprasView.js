@@ -4,6 +4,7 @@
 
 import Header from '../components/Header.js'
 import Footer from '../components/Footer.js'
+import VerMas from '../components/VerMas.js'
 import { db } from '../config/firebaseConfig.js'
 import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
 import { obtenerCompras, resumenMillas, esReembolsada } from '../services/purchaseService.js'
@@ -15,7 +16,7 @@ import { CONTENIDO_INICIAL } from '../utils/contenidoInicial.js'
 
 export default {
 
-    components: { Header, Footer },
+    components: { Header, Footer, VerMas },
 
     data() {
         return {
@@ -140,7 +141,8 @@ export default {
                         <a class="btn botonAmarillo" href="reservas.html">Ver mis reservas</a>
                     </div>
 
-                    <article v-for="compra in compras" :key="compra.id" class="boleta">
+                    <VerMas :items="compras" v-slot="{ visibles }">
+                    <article v-for="compra in visibles" :key="compra.id" class="boleta">
                         <!-- Cabecera: emisor a la izquierda y recuadro del comprobante a la derecha. -->
                         <header class="boletaCabecera">
                             <div class="boletaEmisor">
@@ -228,6 +230,7 @@ export default {
                             </template>
                         </footer>
                     </article>
+                    </VerMas>
                 </div>
             </main>
 

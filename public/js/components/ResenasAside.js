@@ -5,6 +5,7 @@
 import { guardarResena, eliminarResena, promedioEstrellas } from '../services/reviewService.js'
 import { notificar, confirmar } from '../utils/notificaciones.js'
 import { fechaLegible } from '../utils/formatters.js'
+import VerMas from './VerMas.js'
 
 export function estrellasTexto(valor) {
     const llenas = Math.round(valor)
@@ -12,6 +13,8 @@ export function estrellasTexto(valor) {
 }
 
 export default {
+
+    components: { VerMas },
 
     props: {
         producto: { type: Object, default: null },
@@ -139,7 +142,8 @@ export default {
 
                 <!-- Comentarios. -->
                 <p v-if="!resenas.length" class="etiquetaGris">Aún no hay reseñas. ¡Sé el primero en opinar!</p>
-                <article v-for="resena in resenas" :key="resena.id" class="border-bottom pb-3" style="border-color: var(--borde) !important">
+                <VerMas :items="resenas" :reiniciar-con="producto" v-slot="{ visibles }">
+                <article v-for="resena in visibles" :key="resena.id" class="border-bottom pb-3" style="border-color: var(--borde) !important">
                     <div class="d-flex justify-content-between align-items-start gap-2">
                         <div>
                             <p class="fw-bold text-white mb-0">{{ resena.nombre || 'Astronauta' }}</p>
@@ -150,6 +154,7 @@ export default {
                     </div>
                     <p v-if="resena.comentario" class="mb-0 mt-1">{{ resena.comentario }}</p>
                 </article>
+                </VerMas>
             </div>
         </aside>
     `

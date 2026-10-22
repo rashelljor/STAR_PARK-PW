@@ -4,6 +4,7 @@
 
 import Header from '../components/Header.js'
 import Footer from '../components/Footer.js'
+import VerMas from '../components/VerMas.js'
 import { solicitarEvento, obtenerMisEventos, cancelarEvento, obtenerPaquetes } from '../services/eventService.js'
 import { enviarCorreo } from '../services/mailService.js'
 import { esperarUsuario, obtenerPerfil } from '../services/authService.js'
@@ -22,7 +23,7 @@ function formularioVacio() {
 
 export default {
 
-    components: { Header, Footer },
+    components: { Header, Footer, VerMas },
 
     data() {
         return {
@@ -249,7 +250,8 @@ export default {
                         </div>
                         <p v-else-if="!usuario">Inicia sesión para ver el estado de tus solicitudes.</p>
                         <p v-else-if="!misEventos.length">Aún no has enviado solicitudes.</p>
-                        <article v-for="evento in misEventos" :key="evento.id" class="itemCarrito flex-wrap gap-2">
+                        <VerMas :items="misEventos" v-slot="{ visibles }">
+                        <article v-for="evento in visibles" :key="evento.id" class="itemCarrito flex-wrap gap-2">
                             <div>
                                 <p class="mb-0 text-white">{{ evento.paquete }} · {{ evento.cumpleanero }}</p>
                                 <small class="etiquetaGris">{{ evento.fecha }} {{ evento.hora }} · {{ evento.ninos }} niños · {{ formatearPrecio(evento.estimado) }}</small>
@@ -257,6 +259,7 @@ export default {
                             </div>
                             <button v-if="evento.estado === 'pendiente'" type="button" class="botonEliminar" @click="cancelar(evento)">Cancelar</button>
                         </article>
+                        </VerMas>
                     </div>
                 </div>
             </main>

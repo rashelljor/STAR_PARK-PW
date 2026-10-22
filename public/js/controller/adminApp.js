@@ -14,6 +14,7 @@ import { totalesCompras, esReembolsada } from '../services/purchaseService.js'
 import { prepararImagen, indicacionImagen, formatosAceptados } from '../services/imageService.js'
 import { obtenerPerfil, asegurarNombreUsuario } from '../services/authService.js'
 import { enviarNotificacion } from '../services/notificationService.js'
+import { consultaCelular, pasoLista } from '../utils/paginacion.js'
 
 const pagina = document.body.dataset.adminPage
 const app = document.getElementById('adminApp')
@@ -191,11 +192,7 @@ function coincide(termino, ...campos) {
     return normalizar(termino).split(/\s+/).filter(Boolean).every(palabra => texto.includes(palabra))
 }
 
-// Las listas avanzan de 6 en 6 (de 3 en 3 en celular).
-const esCelularLista = window.matchMedia('(max-width: 576px)')
-const pasoLista = () => esCelularLista.matches ? 3 : 6
-
-// Deja ver solo la primera tanda de una lista (filas de una tabla o tarjetas),
+// Deja ver solo la primera tanda de una lista (6 elementos, 3 en celular),
 // con "Ver más" / "Ver menos" debajo. Devuelve mostrar(reiniciar), que se llama
 // tras cada dibujo; reiniciar vuelve a la primera tanda (al buscar o filtrar).
 function paginar(destino) {
@@ -221,7 +218,7 @@ function paginar(destino) {
         // Al ver menos la lista se acorta: se sigue viendo el botón.
         barra.scrollIntoView({ block: 'nearest' })
     })
-    esCelularLista.addEventListener('change', () => mostrar(true))
+    consultaCelular.addEventListener('change', () => mostrar(true))
     return mostrar
 }
 

@@ -3,8 +3,11 @@
 import { getImagenPorDefecto, coloresDe } from '../services/catalogService.js'
 import { promedioEstrellas } from '../services/reviewService.js'
 import { estrellasTexto } from './ResenasAside.js'
+import VerMas from './VerMas.js'
 
 export default {
+
+    components: { VerMas },
 
     props: {
         products: {
@@ -47,6 +50,10 @@ export default {
             return this.colorElegido[producto.id] || coloresDe(producto)[0] || ''
         },
 
+        anclaDe(producto) {
+            return 'producto-' + producto.id
+        },
+
         claseTarjeta(producto) {
             if (this.cardClass) return this.cardClass
             return producto.categoria === 'promociones' ? 'tarjetaAtraccion' : 'tarjetaServicio'
@@ -77,11 +84,12 @@ export default {
     },
 
     template: `
+        <VerMas :items="products" :reiniciar-con="products" :id-ancla="conAnclas ? anclaDe : null" v-slot="{ visibles }">
         <div class="grilla3col">
             <div
-                v-for="producto in products"
+                v-for="producto in visibles"
                 :key="producto.id"
-                :id="conAnclas ? 'producto-' + producto.id : null"
+                :id="conAnclas ? anclaDe(producto) : null"
                 :class="[claseTarjeta(producto), 'glass']"
             >
                 <div class="tarjetaImgCaja">
@@ -127,6 +135,7 @@ export default {
                 </div>
             </div>
         </div>
+        </VerMas>
     `
 
 }

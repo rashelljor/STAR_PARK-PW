@@ -3,6 +3,7 @@
 
 import Header from '../components/Header.js'
 import Footer from '../components/Footer.js'
+import VerMas from '../components/VerMas.js'
 import { db } from '../config/firebaseConfig.js'
 import { collection, doc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
 import { CONTENIDO_INICIAL } from '../utils/contenidoInicial.js'
@@ -17,7 +18,7 @@ const IMAGEN_POR_DEFECTO = '../../assets/img/logostar.png'
 
 export default {
 
-    components: { Header, Footer },
+    components: { Header, Footer, VerMas },
 
     data() {
         return {
@@ -160,8 +161,9 @@ export default {
                         <p class="etiquetaGris">MULTIVERSO DE ENTRETENIMIENTO</p>
                     </div>
                     <p v-if="cargado && !atracciones.length" class="etiquetaGris">Próximamente nuevas atracciones.</p>
-                    <div v-else class="grilla3col">
-                        <article v-for="atraccion in atracciones" :key="atraccion.id" class="tarjetaAtraccion glass">
+                    <VerMas v-else :items="atracciones" v-slot="{ visibles }">
+                    <div class="grilla3col">
+                        <article v-for="atraccion in visibles" :key="atraccion.id" class="tarjetaAtraccion glass">
                             <div class="tarjetaImgCaja">
                                 <img :src="imagenDe(atraccion)" :alt="atraccion.nombre">
                                 <div v-if="atraccion.etiqueta" class="badge">{{ atraccion.etiqueta }}</div>
@@ -177,6 +179,7 @@ export default {
                             </div>
                         </article>
                     </div>
+                    </VerMas>
                 </section>
 
                 <!-- Servicios adicionales del parque -->
@@ -187,8 +190,9 @@ export default {
                     </div>
 
                     <p v-if="cargado && !servicios.length" class="etiquetaGris">Próximamente nuevos servicios.</p>
-                    <div v-else class="grilla3col">
-                        <article v-for="servicio in servicios" :key="servicio.id" class="tarjetaServicio glass">
+                    <VerMas v-else :items="servicios" v-slot="{ visibles }">
+                    <div class="grilla3col">
+                        <article v-for="servicio in visibles" :key="servicio.id" class="tarjetaServicio glass">
                             <div class="tarjetaImgCaja">
                                 <img :src="imagenDe(servicio)" :alt="servicio.nombre">
                             </div>
@@ -202,6 +206,7 @@ export default {
                             </div>
                         </article>
                     </div>
+                    </VerMas>
                 </section>
 
                 <!-- Ubicación y Horarios -->
