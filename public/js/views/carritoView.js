@@ -5,7 +5,7 @@
 import Header from '../components/Header.js'
 import Footer from '../components/Footer.js'
 import CalendarioAforo from '../components/CalendarioAforo.js'
-import { obtenerCarrito, cambiarCantidad, quitarProducto, calcularTotal, contarEntradas, limpiarCarrito, actualizarDesdeCatalogo } from '../services/cartService.js'
+import { cambiarCantidad, quitarProducto, calcularTotal, contarEntradas, limpiarCarrito, actualizarDesdeCatalogo } from '../services/cartService.js'
 import { crearReserva } from '../services/bookingService.js'
 import { cuposLibres } from '../services/capacityService.js'
 import { validarCupon, cuponesDisponibles, calcularDescuento } from '../services/couponService.js'
@@ -54,12 +54,24 @@ export default {
             return contarEntradas(this.carrito)
         },
 
+        // Solo productos del bazar, sin entradas: es un pedido para recoger en el bazar.
+        soloBazar() {
+            return !this.cargando && this.carrito.length > 0 && this.unidades === 0
+        },
+
         descuento() {
             return this.cupon ? calcularDescuento(this.subtotal, this.cupon.descuento) : 0
         },
 
         total() {
             return redondear(this.subtotal - this.descuento)
+        }
+    },
+
+    watch: {
+        // Quien compra solo en el bazar suele estar ya en el parque: se propone recogerlo hoy.
+        soloBazar(valor) {
+            if (valor && !this.formulario.fecha) this.formulario.fecha = this.fechaMinima
         }
     },
 
@@ -77,7 +89,11 @@ export default {
         this.fechaMaxima = maxima
 
         try {
-            this.carrito = await obtenerCarrito()
+            // Se carga ya al día con el catálogo (precio, stock y categoría), así
+            // el carrito sabe desde el inicio si es una compra solo del bazar.
+            const { carrito, avisos } = await actualizarDesdeCatalogo()
+            this.carrito = carrito
+            if (avisos.length) notificar(avisos, 'advertencia')
         } catch (error) {
             console.error(error)
             notificar('No se pudo cargar tu carrito. Recarga la página para intentarlo de nuevo.', 'error')
@@ -208,12 +224,6 @@ export default {
                 return
             }
 
-            // Los productos del bazar se recogen el día de la visita, junto con una entrada.
-            if (this.unidades === 0) {
-                notificar('Los productos del bazar se entregan el día de tu visita: agrega al menos una entrada desde la tienda.', 'advertencia')
-                return
-            }
-
             const errores = erroresDatosReserva(this.formulario)
             if (errores.length) {
                 notificar(errores, 'error')
@@ -233,7 +243,8 @@ export default {
                 }
 
                 // El aforo se vuelve a revisar justo antes de guardar: otro cliente pudo reservar mientras tanto.
-                const libres = await cuposLibres(this.formulario.fecha)
+                // (Un pedido solo del bazar no ocupa aforo.)
+                const libres = this.unidades ? await cuposLibres(this.formulario.fecha) : Infinity
                 if (libres < this.unidades) {
                     notificar(libres
                         ? 'Para el ' + this.formulario.fecha + ' solo quedan ' + libres + ' cupos y tu carrito tiene ' + this.unidades + ' entradas. Elige otra fecha.'
@@ -252,11 +263,14 @@ export default {
                     items: this.carrito
                 })
 
+                const soloBazar = reserva.entradas === 0
                 enviarCorreo({
                     para: reserva.correo,
                     nombre: reserva.nombre,
-                    asunto: 'Reserva registrada para el ' + reserva.fecha + ' — Star Park',
-                    mensaje: 'Registramos tu reserva de ' + reserva.entradas + ' entrada(s) para el ' + reserva.fecha + ' por ' + formatearPrecio(reserva.total) + '. Recuerda pagarla desde "Mis Reservas" para recibir tu entrada con código QR.'
+                    asunto: (soloBazar ? 'Pedido del bazar registrado para el ' : 'Reserva registrada para el ') + reserva.fecha + ' — Star Park',
+                    mensaje: soloBazar
+                        ? 'Registramos tu pedido del bazar para recoger el ' + reserva.fecha + ' por ' + formatearPrecio(reserva.total) + '. Al pagarlo recibirás tu código QR de recojo (si no terminaste el pago, puedes hacerlo desde "Mis Reservas").'
+                        : 'Registramos tu reserva de ' + reserva.entradas + ' entrada(s) para el ' + reserva.fecha + ' por ' + formatearPrecio(reserva.total) + '. Recuerda pagarla desde "Mis Reservas" para recibir tu entrada con código QR.'
                 })
 
                 await limpiarCarrito()
@@ -264,6 +278,11 @@ export default {
                 this.cupon = null
                 this.formulario.fecha = ''
 
+                // Una compra solo del bazar pasa directo al pago; una reserva se paga desde Mis Reservas.
+                if (soloBazar) {
+                    window.location.href = 'pago.html?reserva=' + encodeURIComponent(reserva.id)
+                    return
+                }
                 await notificar('¡Reserva confirmada! Ahora puedes pagarla desde Mis Reservas.', 'exito')
                 window.location.href = 'reservas.html'
             } catch (error) {
@@ -350,7 +369,7 @@ export default {
                     </div>
 
                     <div class="glass bloqueFormulario">
-                        <h3>Datos para la reserva</h3>
+                        <h3>{{ soloBazar ? 'Datos para tu compra' : 'Datos para la reserva' }}</h3>
                         <form id="formularioCarrito" novalidate @submit.prevent="confirmarReserva">
                             <div class="campo">
                                 <label class="form-label" for="nombre">Nombre completo</label>
@@ -365,10 +384,13 @@ export default {
                                 <input v-model="formulario.telefono" class="form-control" type="tel" id="telefono" placeholder="999 999 999" autocomplete="tel" required>
                             </div>
                             <div class="campo">
-                                <span class="form-label">Fecha de visita ({{ unidades }} {{ unidades === 1 ? 'entrada' : 'entradas' }})</span>
-                                <CalendarioAforo v-if="fechaMinima" v-model="formulario.fecha" :min="fechaMinima" :max="fechaMaxima" :entradas="Math.max(1, unidades)" />
+                                <span v-if="soloBazar" class="form-label">Fecha de recojo en el bazar</span>
+                                <span v-else class="form-label">Fecha de visita ({{ unidades }} {{ unidades === 1 ? 'entrada' : 'entradas' }})</span>
+                                <!-- Un pedido solo del bazar no ocupa aforo: ningún día aparece agotado. -->
+                                <CalendarioAforo v-if="fechaMinima" v-model="formulario.fecha" :min="fechaMinima" :max="fechaMaxima" :entradas="soloBazar ? 0 : Math.max(1, unidades)" />
+                                <small v-if="soloBazar" class="etiquetaGris d-block mt-1">Al confirmar pasas directo al pago. Luego recoge tu pedido en el bazar mostrando tu código QR, sin hacer fila.</small>
                             </div>
-                            <button type="submit" class="btn botonAmarillo" :disabled="enviando">{{ enviando ? 'Registrando...' : 'Confirmar reserva' }}</button>
+                            <button type="submit" class="btn botonAmarillo" :disabled="enviando">{{ enviando ? 'Registrando...' : soloBazar ? 'Comprar y pagar' : 'Confirmar reserva' }}</button>
                         </form>
                     </div>
                 </div>

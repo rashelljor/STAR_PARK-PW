@@ -9,7 +9,7 @@
 import Header from '../components/Header.js'
 import Footer from '../components/Footer.js'
 import EntradaQR from '../components/EntradaQR.js'
-import { obtenerReserva } from '../services/bookingService.js'
+import { obtenerReserva, esSoloBazar, textoEntradas } from '../services/bookingService.js'
 import { obtenerCompras, obtenerFidelidad, resumenMillas } from '../services/purchaseService.js'
 import { procesarPago, erroresTarjeta, marcaTarjeta, formatearNumeroTarjeta, soloDigitos, maximoCanjes } from '../services/paymentService.js'
 import { enviarCorreo } from '../services/mailService.js'
@@ -106,6 +106,8 @@ export default {
 
     methods: {
         formatearPrecio,
+        esSoloBazar,
+        textoEntradas,
 
         alEscribirNumero(evento) {
             this.tarjeta.numero = formatearNumeroTarjeta(evento.target.value)
@@ -161,10 +163,11 @@ export default {
                 enviarCorreo({
                     para: this.reserva.correo,
                     nombre: this.reserva.nombre,
-                    asunto: 'Pago aprobado — tu entrada para el ' + this.reserva.fecha,
+                    asunto: 'Pago aprobado — ' + (esSoloBazar(this.reserva) ? 'tu pedido del bazar para el ' : 'tu entrada para el ') + this.reserva.fecha,
                     mensaje: 'Recibimos tu pago de ' + formatearPrecio(this.transaccion.total) + ' con ' + this.transaccion.tarjeta.marca + ' terminada en ' + this.transaccion.tarjeta.ultimos4 +
                         ' (autorización ' + this.transaccion.codigoAutorizacion + '). Ganaste ' + this.transaccion.millasGanadas + ' millas espaciales. ' +
-                        'Tu entrada con código QR está en "Mis Reservas" (código ' + this.reserva.id.slice(-8).toUpperCase() + ').'
+                        (esSoloBazar(this.reserva) ? 'Tu código QR para recoger tus productos en el bazar' : 'Tu entrada con código QR') +
+                        ' está en "Mis Reservas" (código ' + this.reserva.id.slice(-8).toUpperCase() + ').'
                 })
             } catch (error) {
                 console.error(error)
@@ -206,7 +209,7 @@ export default {
                                 <span>{{ formatearPrecio(item.precio * (item.cantidad || 1)) }}</span>
                             </p>
                         </div>
-                        <p class="mb-0">📅 Visita: <strong class="text-white">{{ reserva.fecha }}</strong> · {{ reserva.entradas }} entrada(s)</p>
+                        <p class="mb-0">📅 {{ esSoloBazar(reserva) ? 'Recojo' : 'Visita' }}: <strong class="text-white">{{ reserva.fecha }}</strong> · {{ textoEntradas(reserva) }}</p>
                         <div>
                             <div class="totalFila"><p>Subtotal</p><p>{{ formatearPrecio(reserva.subtotal) }}</p></div>
                             <div v-if="reserva.cupon" class="totalFila"><p>Cupón <span class="celeste">{{ reserva.cupon }}</span></p><p class="celeste">− {{ formatearPrecio(reserva.descuentoCupon) }}</p></div>

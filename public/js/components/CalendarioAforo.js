@@ -60,7 +60,8 @@ export default {
                 const fueraDeRango = fecha < this.min || fecha > this.max
                 const ocupadas = this.ocupadasEn(fecha)
                 const libres = Math.max(0, this.maximo - ocupadas)
-                const estado = libres < this.entradas ? 'agotado' : estadoAforo(ocupadas, this.maximo)
+                // Sin entradas (pedido solo del bazar) no se ocupa aforo: ningún día se agota.
+                const estado = !this.entradas ? 'libre' : libres < this.entradas ? 'agotado' : estadoAforo(ocupadas, this.maximo)
                 celdas.push({ clave: fecha, dia, fecha, fueraDeRango, estado, libres })
             }
             return celdas

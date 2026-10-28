@@ -119,7 +119,8 @@ export default {
                 this.reboteCampana = false
                 requestAnimationFrame(() => { this.reboteCampana = true })
                 nuevas.forEach(item => mostrarAvisoNavegador(item.titulo, item.mensaje))
-                notificar('🔔 ' + nuevas[0].titulo + ': ' + nuevas[0].mensaje, 'info')
+                // La lectura del QR en la puerta o el bazar se muestra como éxito (verde).
+                notificar('🔔 ' + nuevas[0].titulo + ': ' + nuevas[0].mensaje, nuevas[0].tipo === 'qr' ? 'exito' : 'info')
             }, error => console.warn('No se pudo leer la bandeja de entrada:', error))
         },
 

@@ -5,7 +5,7 @@ import HeaderAdmin from '../components/HeaderAdmin.js'
 import { crear, actualizar, eliminar, listar, escuchar, obtenerDocumento, guardarDocumento } from '../services/adminService.js'
 import { CONTENIDO_INICIAL, ATRACCIONES_INICIALES, SERVICIOS_INICIALES, PRODUCTOS_INICIALES } from '../utils/contenidoInicial.js'
 import { notificar, confirmar, notificarAlCargar } from '../utils/notificaciones.js'
-import { aNumero, fechaLegible, formatearPrecio } from '../utils/formatters.js'
+import { aNumero, fechaLegible, formatearPrecio, milisegundos } from '../utils/formatters.js'
 import { AFORO_POR_DEFECTO, CONDICIONES_CUPON, CUPONES_INICIALES, PAQUETES_EVENTO, PREFIJO_QR } from '../utils/constants.js'
 import { estadoAforo } from '../services/capacityService.js'
 import { coloresDe, normalizar } from '../services/catalogService.js'
@@ -13,7 +13,9 @@ import { enviarCorreo } from '../services/mailService.js'
 import { totalesCompras, esReembolsada } from '../services/purchaseService.js'
 import { prepararImagen, indicacionImagen, formatosAceptados } from '../services/imageService.js'
 import { obtenerPerfil, asegurarNombreUsuario } from '../services/authService.js'
-import { enviarNotificacion } from '../services/notificationService.js'
+import { entradasDe, esSoloBazar, textoEntradas, productosBazar, productosEntregados, estadoPedido, ESTADOS_PEDIDO } from '../services/bookingService.js'
+import { enviarNotificacion, mostrarAvisoNavegador, avisosNavegador, pedirAvisosNavegador } from '../services/notificationService.js'
+import { escucharAvisos, obtenerVistoHasta, marcarAvisosVistos } from '../services/avisosAdminService.js'
 import { consultaCelular, pasoLista } from '../utils/paginacion.js'
 
 const pagina = document.body.dataset.adminPage
@@ -79,9 +81,80 @@ function mostrarShell() {
 
     // "Cerrar sesión" está en la barra superior, siempre visible.
     document.querySelectorAll('[data-cerrar-sesion]').forEach(boton => { boton.onclick = cerrarSesionAdmin })
+    activarCampana()
 
     const contenido = vistas[pagina]
     if (contenido) contenido(document.getElementById('adminContent'))
+}
+
+// Campanita de la barra superior. Al abrirla se marcan como vistos todos los
+// avisos (el contador se vacía), pero los nuevos siguen resaltados hasta cerrarla.
+// Los que llegan con el panel abierto hacen rebotar el contador y, si el admin
+// dio permiso, muestran un aviso del navegador. No usa notificar(): cerraría
+// una confirmación que el admin tenga abierta en ese momento.
+function activarCampana() {
+    const boton = document.getElementById('adminCampana')
+    const cantidad = document.getElementById('adminAvisosCantidad')
+    const panel = document.getElementById('adminAvisos')
+    let avisos = []
+    let vistoHasta = 0
+    let resaltarDesde = 0
+    let conocidos = null
+
+    const esNuevo = (aviso, desde) => milisegundos(aviso.fecha) > desde
+    const dibujarContador = () => {
+        const sinLeer = avisos.filter(aviso => esNuevo(aviso, vistoHasta)).length
+        cantidad.textContent = sinLeer > 9 ? '9+' : sinLeer
+        cantidad.classList.toggle('d-none', !sinLeer)
+        boton.setAttribute('aria-label', 'Notificaciones, ' + sinLeer + ' sin leer')
+    }
+    const dibujarPanel = () => {
+        panel.innerHTML = `<div class="d-flex justify-content-between align-items-center mb-2">
+                <h2 class="h6 text-white m-0">🔔 Notificaciones</h2>
+                <button type="button" class="btn btn-sm btn-outline-light py-0" data-cerrar-avisos aria-label="Cerrar notificaciones">✕</button>
+            </div>` + (avisos.length ? avisos.map(aviso => `
+            <a class="d-flex gap-2 p-2 mb-1 rounded text-decoration-none text-white border ${esNuevo(aviso, resaltarDesde) ? 'border-warning' : 'border-secondary'}" href="${escapar(aviso.enlace)}"${aviso.enlace.startsWith('../') ? ' target="_blank" rel="noopener"' : ''}>
+                <span aria-hidden="true">${aviso.icono}</span>
+                <span class="flex-grow-1" style="min-width: 0">
+                    <strong class="d-block small">${escapar(aviso.titulo)}${esNuevo(aviso, resaltarDesde) ? ' <span class="badgeTu">nuevo</span>' : ''}</strong>
+                    <span class="d-block small text-white-50 text-truncate">${escapar(aviso.mensaje)}</span>
+                    <span class="d-block small text-white-50">${aviso.fecha ? escapar(fechaLegible(aviso.fecha)) : 'Ahora'}</span>
+                </span>
+            </a>`).join('') : '<p class="text-white-50 small m-0">No hay notificaciones por ahora.</p>')
+    }
+    const abierto = () => !panel.classList.contains('d-none')
+    const alternar = abrir => {
+        panel.classList.toggle('d-none', !abrir)
+        boton.setAttribute('aria-expanded', String(abrir))
+        if (!abrir) return
+        // El permiso de avisos del navegador solo se puede pedir durante un clic.
+        if (avisosNavegador() === 'default') pedirAvisosNavegador()
+        resaltarDesde = vistoHasta
+        dibujarPanel()
+        vistoHasta = Date.now()
+        dibujarContador()
+        marcarAvisosVistos().catch(fallo => console.error('No se pudo guardar lo visto en la campanita:', fallo))
+    }
+
+    boton.onclick = () => alternar(!abierto())
+    panel.addEventListener('click', evento => { if (evento.target.closest('[data-cerrar-avisos]')) alternar(false) })
+    document.addEventListener('click', evento => { if (abierto() && !panel.contains(evento.target) && !boton.contains(evento.target)) alternar(false) })
+    document.addEventListener('keydown', evento => { if (evento.key === 'Escape' && abierto()) alternar(false) })
+
+    obtenerVistoHasta().catch(() => 0).then(visto => {
+        vistoHasta = visto
+        escucharAvisos(lista => {
+            const nuevos = conocidos ? lista.filter(aviso => !conocidos.has(aviso.id) && !aviso.silencioso && esNuevo(aviso, vistoHasta)) : []
+            conocidos = new Set(lista.map(aviso => aviso.id))
+            avisos = lista
+            dibujarContador()
+            if (abierto()) dibujarPanel()
+            if (!nuevos.length) return
+            cantidad.classList.remove('rebote')
+            requestAnimationFrame(() => cantidad.classList.add('rebote'))
+            nuevos.forEach(aviso => mostrarAvisoNavegador(aviso.titulo, aviso.mensaje))
+        }, fallo => console.warn('La campanita no pudo leer una colección:', fallo))
+    })
 }
 
 async function cerrarSesionAdmin() {
@@ -98,8 +171,11 @@ async function cerrarSesionAdmin() {
     }
 }
 
+const AVISO_AMBAS_IMAGENES = 'No puedes usar un archivo y un URL a la vez. Quita la imagen subida o borra el URL.'
+
 // Selector de imagen para los formularios del panel: el archivo se recorta al
-// tamaño del tipo y queda en el campo oculto "imagen", que se guarda con el resto.
+// tamaño del tipo, o se pega el URL de una imagen (solo uno de los dos). El
+// resultado queda en el campo oculto "imagen", que se guarda con el resto.
 function campoImagen(tipo, etiqueta = 'Imagen') {
     return `<span class="text-white d-block">${etiqueta}</span>
         <div class="d-flex flex-wrap align-items-center gap-3">
@@ -107,6 +183,7 @@ function campoImagen(tipo, etiqueta = 'Imagen') {
             <div class="flex-grow-1">
                 <input type="hidden" name="imagen">
                 <input class="form-control" type="file" accept="${formatosAceptados()}" data-archivo-imagen aria-label="${etiqueta}">
+                <input class="form-control mt-2" type="url" pattern="https?://.+" title="Debe empezar con http:// o https://" placeholder="o pega el URL de una imagen (https://...)" data-url-imagen aria-label="URL de ${etiqueta.toLowerCase()}">
                 <small class="text-white-50 d-block mt-1">${indicacionImagen(tipo)}</small>
             </div>
             <button type="button" class="btn btn-sm btn-outline-danger d-none" data-quitar-imagen>Quitar imagen</button>
@@ -120,15 +197,36 @@ function activarCampoImagen(formulario, tipo) {
     const archivo = formulario.querySelector('[data-archivo-imagen]')
     const vista = formulario.querySelector('[data-vista-imagen]')
     const quitar = formulario.querySelector('[data-quitar-imagen]')
-    const mostrar = valor => {
+    const url = formulario.querySelector('[data-url-imagen]')
+    // Las imágenes subidas se guardan como data URL; las de un URL, tal cual.
+    const esArchivo = () => oculto.value.startsWith('data:')
+    const previsualizar = valor => {
         oculto.value = valor || ''
         vista.src = valor || ''
         vista.classList.toggle('d-none', !valor)
         quitar.classList.toggle('d-none', !valor)
     }
+    const mostrar = valor => {
+        previsualizar(valor)
+        url.value = valor && !esArchivo() ? valor : ''
+    }
+    url.addEventListener('input', () => {
+        const texto = url.value.trim()
+        if (texto && esArchivo()) {
+            notificar(AVISO_AMBAS_IMAGENES, 'error')
+            url.value = ''
+            return
+        }
+        if (!esArchivo()) previsualizar(/^https?:\/\/.+/.test(texto) ? texto : '')
+    })
     archivo.addEventListener('change', async () => {
         const elegido = archivo.files[0]
         if (!elegido) return
+        if (url.value.trim()) {
+            notificar(AVISO_AMBAS_IMAGENES, 'error')
+            archivo.value = ''
+            return
+        }
         try {
             mostrar(await prepararImagen(elegido, tipo))
         } catch (fallo) {
@@ -261,31 +359,63 @@ async function sincronizarFidelidad(ventas) {
     }))
 }
 
-// Marca la entrada como usada y entrega los productos del bazar. Las reservas
-// nuevas ya apartaron su stock al reservar; solo a las del sistema anterior se
-// les descuenta aquí, en la misma transacción. Devuelve lo que se entrega.
-async function validarYDescontarStock(reserva) {
+const plural = (cantidad, singular, varias) => cantidad + ' ' + (cantidad === 1 ? singular : varias)
+
+// Aviso a la bandeja del cliente al confirmar su QR: en la página que tenga
+// abierta le aparece "QR leído con éxito". Un fallo no deshace la validación.
+function avisarLecturaQR(reserva, parte) {
+    const codigo = reserva.id.slice(-8).toUpperCase()
+    const faltanProductos = parte === 'entrada' && productosBazar(reserva).length && !productosEntregados(reserva)
+    return enviarNotificacion(reserva.uid, {
+        tipo: 'qr',
+        titulo: 'QR leído con éxito',
+        mensaje: parte === 'entrada'
+            ? 'Validamos tu entrada ' + codigo + ' (' + textoEntradas(reserva) + '). ¡Disfruta tu visita a Star Park!' + (faltanProductos ? ' Recuerda recoger tus productos del bazar con el mismo QR.' : '')
+            : 'Te entregamos tus productos del bazar (' + lineasBazar(reserva).join(', ') + ') del pedido ' + codigo + '. ¡Gracias por tu compra!'
+    }).catch(fallo => console.error('No se pudo avisar al cliente:', fallo))
+}
+
+// "2 × Llavero (#ff0000)" por cada producto del bazar de la reserva.
+function lineasBazar(reserva) {
+    return productosBazar(reserva).map(item => (Number(item.cantidad) || 1) + ' × ' + item.nombre + (item.color ? ' (' + item.color + ')' : ''))
+}
+
+// Marca la entrada como usada. Los productos del bazar se entregan aparte
+// (entregarProductos): si aún no se recogieron, quedan pendientes de entrega.
+async function validarEntradaReserva(reserva) {
+    await runTransaction(db, async transaccion => {
+        const referencia = doc(db, 'reservas', reserva.id)
+        const actual = (await transaccion.get(referencia)).data()
+        if (actual?.estado === 'usada') throw new Error('Esta entrada ya fue validada.')
+        const cambios = { estado: 'usada', usadaEn: serverTimestamp(), validadaPor: auth.currentUser.email, actualizadoEn: serverTimestamp() }
+        if (productosBazar(reserva).length && actual?.productosEntregados !== true) cambios.productosEntregados = false
+        transaccion.update(referencia, cambios)
+    })
+}
+
+// Entrega los productos del bazar. Las reservas nuevas ya apartaron su stock
+// al reservar; solo a las del sistema anterior se les descuenta aquí, en la
+// misma transacción.
+async function entregarProductos(reserva) {
     const porProducto = {}
-    ;(reserva.items || []).filter(item => item.categoria === 'bazar').forEach(item => {
+    productosBazar(reserva).forEach(item => {
         const id = item.productoId || item.id
         porProducto[id] = (porProducto[id] || 0) + (Number(item.cantidad) || 1)
     })
-    const entregados = (reserva.items || []).filter(item => item.categoria === 'bazar').map(item => (Number(item.cantidad) || 1) + ' × ' + item.nombre + (item.color ? ' (' + item.color + ')' : ''))
 
     await runTransaction(db, async transaccion => {
-        const referenciaReserva = doc(db, 'reservas', reserva.id)
-        const actual = await transaccion.get(referenciaReserva)
-        if (actual.data()?.estado === 'usada') throw new Error('Esta entrada ya fue validada.')
+        const referencia = doc(db, 'reservas', reserva.id)
+        const actual = (await transaccion.get(referencia)).data()
+        if (actual && productosEntregados(actual)) throw new Error('Los productos de este pedido ya se entregaron.')
         // Todas las lecturas van antes de las escrituras.
         const productos = await Promise.all(Object.keys(porProducto).map(id => transaccion.get(doc(db, 'productos', id))))
-        transaccion.update(referenciaReserva, { estado: 'usada', usadaEn: serverTimestamp(), validadaPor: auth.currentUser.email, actualizadoEn: serverTimestamp() })
+        transaccion.update(referencia, { productosEntregados: true, entregadoEn: serverTimestamp(), entregadoPor: auth.currentUser.email, actualizadoEn: serverTimestamp() })
         if (reserva.apartado) return
         productos.filter(producto => producto.exists()).forEach(producto => {
             const stock = Math.max(0, (Number(producto.data().stock) || 0) - porProducto[producto.id])
             transaccion.update(producto.ref, { stock, actualizadoEn: serverTimestamp() })
         })
     })
-    return entregados
 }
 
 function cargarScript(url) {
@@ -591,6 +721,86 @@ function panelCatalogo(elemento) {
     seccionPaquetes(paquetes, buscador)
 }
 
+// Pedidos del bazar (en Administración de reservas y ventas): las reservas que
+// llevan productos del bazar, solas o junto con entradas. El cliente los recoge
+// mostrando su QR en "Validar entrada" o el admin los marca como entregados aquí.
+// Recibe las reservas del panel con actualizar(lista); alEntregar recarga el panel.
+const COLOR_PEDIDO = { pendiente: '', porEntregar: 'text-warning', entregado: 'text-success', cancelado: 'text-danger' }
+
+function seccionPedidos(contenedor, alEntregar) {
+    contenedor.innerHTML = `
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
+            <h2 class="h4 text-white m-0">🛍️ Pedidos del bazar <span class="badgeTu align-middle" data-cantidad></span></h2>
+            <div class="d-flex flex-wrap gap-2">
+                <input class="form-control w-auto" type="search" data-buscar placeholder="Código, cliente o producto" aria-label="Buscar pedidos del bazar" autocomplete="off">
+                <select class="form-select w-auto" data-filtro aria-label="Filtrar pedidos del bazar">
+                    <option value="">Todos los pedidos</option>
+                    ${Object.entries(ESTADOS_PEDIDO).map(([valor, texto]) => `<option value="${valor}">${texto}</option>`).join('')}
+                </select>
+            </div>
+        </div>
+        <p class="text-white-50 mb-2" data-resumen></p>
+        <p class="text-white-50 small">Los más recientes primero. El cliente recoge sus productos mostrando su QR en <a class="link-info" href="#tituloValidar">Validar entrada</a>; si el QR trae también entrada, cada parte se confirma por separado.</p>
+        <div class="table-responsive"><table class="table table-dark"><thead><tr><th>Registrado</th><th>Código</th><th>Cliente</th><th>Productos</th><th>Recojo</th><th>Monto</th><th>Estado</th><th>Acciones</th></tr></thead><tbody data-tabla><tr><td colspan="8">Cargando...</td></tr></tbody></table></div>`
+    const tabla = contenedor.querySelector('[data-tabla]')
+    const filtro = contenedor.querySelector('[data-filtro]')
+    const buscador = contenedor.querySelector('[data-buscar]')
+    const mostrar = paginar(tabla)
+    let pedidos = []
+
+    const codigoDe = reserva => reserva.id.slice(-8).toUpperCase()
+    const montoBazar = reserva => productosBazar(reserva).reduce((suma, item) => suma + aNumero(item.precio) * (Number(item.cantidad) || 1), 0)
+    const fechaEstado = reserva => ({ entregado: reserva.entregadoEn || reserva.usadaEn, cancelado: reserva.canceladaEn })[estadoPedido(reserva)]
+
+    const dibujar = (reiniciar = false) => {
+        const porEstado = estado => pedidos.filter(reserva => estadoPedido(reserva) === estado).length
+        contenedor.querySelector('[data-cantidad]').textContent = pedidos.length
+        contenedor.querySelector('[data-resumen]').innerHTML = `<strong class="text-warning">${porEstado('porEntregar')} por entregar</strong> · <strong class="text-success">${porEstado('entregado')} entregados</strong> · ${porEstado('pendiente')} pendientes de pago · <strong class="text-danger">${porEstado('cancelado')} cancelados</strong>`
+        const visibles = pedidos.filter(reserva => (!filtro.value || estadoPedido(reserva) === filtro.value) &&
+            coincide(buscador.value, codigoDe(reserva), reserva.nombre, reserva.correo, ...productosBazar(reserva).map(item => item.nombre)))
+        tabla.innerHTML = visibles.length ? visibles.map(reserva => {
+            const estado = estadoPedido(reserva)
+            return `<tr>
+                <td class="text-nowrap">${reserva.fechaRegistro ? escapar(fechaLegible(reserva.fechaRegistro)) : '—'}</td>
+                <td><code>${codigoDe(reserva)}</code></td>
+                <td>${escapar(reserva.nombre)}<div class="small text-white-50">${escapar(reserva.correo)}</div></td>
+                <td>${lineasBazar(reserva).map(escapar).join('<br>')}${esSoloBazar(reserva) ? '' : `<div class="small text-white-50">Con ${plural(entradasDe(reserva), 'entrada', 'entradas')}</div>`}</td>
+                <td>${escapar(reserva.fecha)}</td>
+                <td>${formatearPrecio(montoBazar(reserva))}</td>
+                <td><span class="${COLOR_PEDIDO[estado]}">${escapar(ESTADOS_PEDIDO[estado])}</span>${fechaEstado(reserva) ? `<div class="small text-white-50">${escapar(fechaLegible(fechaEstado(reserva)))}</div>` : ''}</td>
+                <td>${estado === 'porEntregar' ? `<button class="btn btn-sm btn-outline-success" data-entregar="${reserva.id}">Marcar entregado</button>` : '—'}</td>
+            </tr>`
+        }).join('') : `<tr><td colspan="8">${pedidos.length ? 'No hay pedidos con este filtro o búsqueda.' : 'Aún no hay pedidos del bazar.'}</td></tr>`
+        mostrar(reiniciar)
+    }
+
+    const registroDe = reserva => reserva.fechaRegistro?.toMillis?.() || 0
+    const actualizar = lista => {
+        pedidos = lista.filter(reserva => productosBazar(reserva).length).sort((a, b) => registroDe(b) - registroDe(a))
+        dibujar()
+    }
+
+    filtro.onchange = () => dibujar(true)
+    buscador.addEventListener('input', () => dibujar(true))
+    tabla.addEventListener('click', async evento => {
+        const boton = evento.target.closest('[data-entregar]')
+        if (!boton) return
+        const reserva = pedidos.find(item => item.id === boton.dataset.entregar)
+        if (!await confirmar('¿Marcar como entregados los productos de ' + reserva.nombre + '? ' + lineasBazar(reserva).join(', ') + '.', { textoConfirmar: 'Marcar entregado' })) return
+        boton.disabled = true
+        try {
+            await entregarProductos(reserva)
+            avisarLecturaQR(reserva, 'productos')
+            notificar('Pedido ' + codigoDe(reserva) + ' entregado.', 'exito')
+        } catch (fallo) {
+            console.error(fallo)
+            notificar('No se pudo marcar el pedido como entregado: ' + fallo.message, 'error')
+        }
+        alEntregar()
+    })
+    return actualizar
+}
+
 // Paquetes de cumpleaños (colección "paquetes"). Mientras no haya ninguno guardado,
 // el sitio usa los de constants.js; al editar o borrar el primero, se guardan
 // todos para que la página de cumpleaños no pierda los demás.
@@ -845,8 +1055,8 @@ function panelReservas(elemento) {
         <h1 class="text-white">Administración de reservas y ventas</h1>
 
         <section class="glass p-4 mb-4" aria-labelledby="tituloValidar">
-            <h2 class="h4 text-white" id="tituloValidar">🎟️ Validar entrada</h2>
-            <p class="text-white-50">Escanea el código QR de la entrada del cliente o escribe su código de 8 caracteres.</p>
+            <h2 class="h4 text-white" id="tituloValidar">🎟️ Validar entrada o pedido del bazar</h2>
+            <p class="text-white-50">Escanea el código QR del cliente o escribe su código de 8 caracteres. Si el QR trae entrada y productos del bazar, confirma cada parte con su botón.</p>
             <div class="row g-3">
                 <div class="col-12 col-lg-6">
                     <div id="lectorQR" class="rounded overflow-hidden" style="max-width: 420px"></div>
@@ -876,7 +1086,7 @@ function panelReservas(elemento) {
                 </select>
             </div>
             <p class="text-white-50 mb-2" id="resumenPendientes"></p>
-            <p class="text-white-50 small">Las más recientes primero. Si el cliente quita una reserva sin pagar, se borra; las canceladas son reservas pagadas que el cliente canceló antes de su visita (con reembolso).</p>
+            <p class="text-white-50 small">Las más recientes primero. Si el cliente quita una reserva sin pagar, se borra; las canceladas son reservas pagadas que el cliente canceló antes de su visita (con reembolso). Los pedidos solo del bazar están más abajo, en Pedidos del bazar.</p>
             <div class="table-responsive"><table class="table table-dark"><thead><tr><th>Registrada</th><th>Código</th><th>Cliente</th><th>Correo</th><th>Visita</th><th>Entradas</th><th>Total</th><th>Estado</th></tr></thead><tbody id="tablaPendientes"><tr><td colspan="8">Cargando...</td></tr></tbody></table></div>
         </section>
 
@@ -893,6 +1103,8 @@ function panelReservas(elemento) {
             <div class="table-responsive"><table class="table table-dark"><thead><tr><th>Registrada</th><th>Código</th><th>Cliente</th><th>Correo</th><th>Visita</th><th>Entradas</th><th>Total</th><th>Estado</th><th>Pago</th></tr></thead><tbody id="tablaPagadas"><tr><td colspan="9">Cargando...</td></tr></tbody></table></div>
         </section>
 
+        <section class="glass p-4 mb-4" id="pedidos"></section>
+
         <section class="glass p-4" id="eventos">
             <h2 class="h4 text-white">🎂 Solicitudes de cumpleaños y eventos <span class="badgeTu align-middle" id="cantidadEventos"></span></h2>
             <p class="text-white-50" id="resumenEventos"></p>
@@ -908,6 +1120,8 @@ function panelReservas(elemento) {
     const resultado = document.getElementById('resultadoValidacion')
     const mostrarPendientes = paginar(tablaPendientes)
     const mostrarPagadas = paginar(tablaPagadas)
+    // Pedidos del bazar: usa las mismas reservas que este panel; al entregar, se recarga todo.
+    const actualizarPedidos = seccionPedidos(document.getElementById('pedidos'), () => cargarReservas())
 
     const codigoDe = id => id.slice(-8).toUpperCase()
     // Orden de registro (fechaRegistro), la más reciente primero. Las reservas
@@ -920,17 +1134,18 @@ function panelReservas(elemento) {
         <td>${escapar(reserva.nombre)}</td>
         <td>${escapar(reserva.correo)}</td>
         <td>${escapar(reserva.fecha)}</td>
-        <td>${reserva.entradas || (reserva.items || []).length}</td>
+        <td>${esSoloBazar(reserva) ? 'Solo bazar' : entradasDe(reserva)}${productosBazar(reserva).length ? `<div class="small text-white-50">+ bazar: ${escapar(ESTADOS_PEDIDO[estadoPedido(reserva)])}</div>` : ''}</td>
         <td>${formatearPrecio(reserva.total)}${reserva.cupon ? `<div class="small text-white-50">Cupón ${escapar(reserva.cupon)}</div>` : ''}</td>`
 
-    const plural = (cantidad, singular, varias) => cantidad + ' ' + (cantidad === 1 ? singular : varias)
     const dibujarReservas = (reiniciar = false) => {
-        const canceladas = reservas.filter(reserva => reserva.estado === 'cancelada')
-        const sinPagar = reservas.filter(reserva => !reserva.pagado)
+        // Los pedidos solo del bazar tienen su propia lista (Pedidos del bazar).
+        const conEntradas = reservas.filter(reserva => !esSoloBazar(reserva))
+        const canceladas = conEntradas.filter(reserva => reserva.estado === 'cancelada')
+        const sinPagar = conEntradas.filter(reserva => !reserva.pagado)
         const pendientes = [...sinPagar, ...canceladas]
             .filter(reserva => !filtroPendientes.value || (filtroPendientes.value === 'cancelada') === (reserva.estado === 'cancelada'))
             .sort(porRegistro)
-        const pagadas = reservas.filter(reserva => reserva.pagado && reserva.estado !== 'cancelada').sort(porRegistro)
+        const pagadas = conEntradas.filter(reserva => reserva.pagado && reserva.estado !== 'cancelada').sort(porRegistro)
         const visibles = pagadas.filter(reserva => !filtro.value || reserva.estado === filtro.value)
         const reembolsado = canceladas.reduce((suma, reserva) => suma + aNumero(reserva.reembolso), 0)
         const porCobrar = sinPagar.reduce((suma, reserva) => suma + aNumero(reserva.total), 0)
@@ -963,37 +1178,90 @@ function panelReservas(elemento) {
         reservas = lista
         transacciones = pagos
         dibujarReservas()
+        actualizarPedidos(lista)
     }).catch(errorDeCarga)
 
-    // Muestra el resultado de la validación en una tarjeta con el color del mensaje.
-    const mostrarResultado = (tipo, titulo, detalle) => {
-        resultado.innerHTML = `<div class="mensajeCaja mensaje-${tipo} mw-100 text-start p-3"><h3 class="mensajeTitulo h5 text-start">${titulo}</h3><div class="mensajeTexto">${detalle}</div></div>`
+    // Muestra el resultado de la lectura en una tarjeta con el color del mensaje;
+    // "botones" son las confirmaciones que faltan (entrada y/o productos).
+    const mostrarResultado = (tipo, titulo, detalle, botones = '') => {
+        resultado.innerHTML = `<div class="mensajeCaja mensaje-${tipo} mw-100 text-start p-3"><h3 class="mensajeTitulo h5 text-start">${titulo}</h3><div class="mensajeTexto">${detalle}</div>${botones ? `<div class="d-flex flex-wrap gap-2 mt-3">${botones}</div>` : ''}</div>`
+        resultado.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    }
+
+    // Un QR puede llevar entrada, productos del bazar o ambos. Cada parte se
+    // confirma por separado y pasa a su propia lista: la entrada a "Reservas
+    // pagadas" y los productos a "Pedidos del bazar" (más abajo).
+    const partesDe = reserva => ({
+        entrada: !esSoloBazar(reserva),
+        entradaUsada: reserva.estado === 'usada',
+        productos: productosBazar(reserva).length > 0,
+        entregados: productosEntregados(reserva)
+    })
+    const datosDe = reserva => `<strong>${escapar(reserva.nombre)}</strong> · ${textoEntradas(reserva)} · ${esSoloBazar(reserva) ? 'recojo' : 'visita'} ${escapar(reserva.fecha)} · código ${codigoDe(reserva.id)}`
+
+    // Lo ya confirmado va con ✓ y lo que falta, con su botón.
+    const mostrarLectura = (reserva, tipo, titulo) => {
+        const partes = partesDe(reserva)
+        const lineas = [datosDe(reserva)]
+        if (partes.entrada) lineas.push(partes.entradaUsada
+            ? '✓ Entrada validada' + (reserva.usadaEn ? ' el ' + escapar(fechaLegible(reserva.usadaEn)) : '')
+            : '🎟️ Entrada por validar: ' + plural(entradasDe(reserva), 'persona', 'personas'))
+        if (partes.productos) lineas.push((partes.entregados
+            ? '✓ Productos entregados' + (reserva.entregadoEn ? ' el ' + escapar(fechaLegible(reserva.entregadoEn)) : '')
+            : '🛍️ Productos por entregar') + ': ' + lineasBazar(reserva).map(escapar).join(', '))
+        const botones = (partes.entrada && !partes.entradaUsada ? '<button type="button" class="btn btn-warning" data-confirmar="entrada">🎟️ Validar entrada</button>' : '') +
+            (partes.productos && !partes.entregados ? '<button type="button" class="btn btn-outline-info" data-confirmar="productos">🛍️ Entregar productos</button>' : '')
+        mostrarResultado(tipo, titulo, lineas.join('<br>'), botones)
+    }
+
+    // Confirma la entrada o la entrega de una reserva ya leída y avisa al
+    // cliente en su bandeja (le aparece "QR leído con éxito" en la página).
+    let leida = null
+    let validando = false
+    const confirmarParte = async (reserva, parte) => {
+        const esEntrada = parte === 'entrada'
+        const hoy = fechaLocal()
+        const pregunta = esEntrada
+            ? 'Esta entrada es para el ' + reserva.fecha + ' (hoy es ' + hoy + '). ¿Dejar pasar de todos modos?'
+            : 'Este pedido es para recoger el ' + reserva.fecha + ' (hoy es ' + hoy + '). ¿Entregar los productos de todos modos?'
+        if (reserva.fecha !== hoy && !await confirmar(pregunta, { textoConfirmar: esEntrada ? 'Validar igual' : 'Entregar igual' })) {
+            return mostrarLectura(reserva, 'advertencia', '! Fecha distinta — no se confirmó')
+        }
+
+        await (esEntrada ? validarEntradaReserva(reserva) : entregarProductos(reserva))
+        navigator.vibrate?.(120)
+        avisarLecturaQR(reserva, parte)
+
+        await cargarReservas()
+        leida = reservas.find(item => item.id === reserva.id) || reserva
+        mostrarLectura(leida, 'exito', esEntrada ? '✓ Entrada válida — puede pasar' : '✓ Productos entregados')
     }
 
     // Valida por id completo (QR) o por los últimos 8 caracteres (código escrito).
-    let validando = false
+    // Si el QR lleva una sola cosa (solo entrada o solo bazar) se confirma al
+    // leerlo; si lleva ambas, se muestran los dos botones.
     const validarEntrada = async texto => {
         if (validando) return
         validando = true
+        leida = null
         try {
             const limpio = String(texto || '').trim().replace(PREFIJO_QR, '')
             await cargarReservas()
             const reserva = reservas.find(item => item.id === limpio) || reservas.find(item => codigoDe(item.id) === limpio.toUpperCase())
-            if (!reserva) return mostrarResultado('error', '✕ Entrada no encontrada', `No existe una reserva con el código <strong>${escapar(limpio)}</strong>.`)
+            if (!reserva) return mostrarResultado('error', '✕ QR no encontrado', `No existe una reserva con el código <strong>${escapar(limpio)}</strong>.`)
 
-            const datos = `<strong>${escapar(reserva.nombre)}</strong> · ${reserva.entradas || (reserva.items || []).length} entrada(s) · visita ${escapar(reserva.fecha)} · código ${codigoDe(reserva.id)}`
-            if (reserva.estado === 'cancelada') return mostrarResultado('error', '✕ Entrada cancelada', datos + '<br>El cliente canceló esta reserva' + (reserva.canceladaEn ? ' el ' + escapar(fechaLegible(reserva.canceladaEn)) : '') + ' y se le reembolsó el pago.')
-            if (!reserva.pagado) return mostrarResultado('error', '✕ Entrada no pagada', datos + '<br>La reserva sigue pendiente de pago.')
-            if (reserva.estado === 'usada') return mostrarResultado('advertencia', '! Entrada ya usada', datos + '<br>Se usó el ' + escapar(fechaLegible(reserva.usadaEn)) + '.')
+            const datos = datosDe(reserva)
+            if (reserva.estado === 'cancelada') return mostrarResultado('error', '✕ Reserva cancelada', datos + '<br>El cliente canceló esta reserva' + (reserva.canceladaEn ? ' el ' + escapar(fechaLegible(reserva.canceladaEn)) : '') + ' y se le reembolsó el pago.')
+            if (!reserva.pagado) return mostrarResultado('error', '✕ Reserva no pagada', datos + '<br>La reserva sigue pendiente de pago.')
 
-            const hoy = fechaLocal()
-            if (reserva.fecha !== hoy && !await confirmar('Esta entrada es para el ' + reserva.fecha + ' (hoy es ' + hoy + '). ¿Dejar pasar de todos modos?', { textoConfirmar: 'Validar igual' })) {
-                return mostrarResultado('advertencia', '! Fecha distinta', datos + '<br>No se validó.')
-            }
+            const partes = partesDe(reserva)
+            const faltaEntrada = partes.entrada && !partes.entradaUsada
+            const faltanProductos = partes.productos && !partes.entregados
+            if (!faltaEntrada && !faltanProductos) return mostrarLectura(reserva, 'advertencia', '! QR ya usado')
 
-            const entregados = await validarYDescontarStock(reserva)
-            mostrarResultado('exito', '✓ Entrada válida — puede pasar', datos + (entregados.length ? '<br>Entregar del bazar: ' + entregados.map(escapar).join(', ') + '. Stock actualizado.' : ''))
-            cargarReservas()
+            leida = reserva
+            if (partes.entrada && partes.productos) return mostrarLectura(reserva, 'exito', '✓ QR leído correctamente — confirma cada parte')
+            await confirmarParte(reserva, faltaEntrada ? 'entrada' : 'productos')
         } catch (fallo) {
             console.error(fallo)
             mostrarResultado('error', '✕ No se pudo validar', escapar(fallo.message))
@@ -1001,6 +1269,21 @@ function panelReservas(elemento) {
             validando = false
         }
     }
+
+    resultado.addEventListener('click', async evento => {
+        const boton = evento.target.closest('[data-confirmar]')
+        if (!boton || !leida || validando) return
+        validando = true
+        boton.disabled = true
+        try {
+            await confirmarParte(leida, boton.dataset.confirmar)
+        } catch (fallo) {
+            console.error(fallo)
+            mostrarResultado('error', '✕ No se pudo confirmar', escapar(fallo.message))
+        } finally {
+            validando = false
+        }
+    })
 
     document.getElementById('formCodigo').addEventListener('submit', evento => {
         evento.preventDefault()
@@ -1096,7 +1379,7 @@ function panelReservas(elemento) {
 
     cargarReservas()
     cargarEventos()
-    if (window.location.hash === '#eventos') document.getElementById('eventos').scrollIntoView()
+    if (['#eventos', '#pedidos'].includes(window.location.hash)) document.querySelector(window.location.hash).scrollIntoView()
 }
 
 // Contenido institucional: edita en tiempo real lo que se ve en users/index.html.

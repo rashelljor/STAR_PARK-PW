@@ -84,7 +84,7 @@ export default {
     },
 
     template: `
-        <VerMas :items="products" :reiniciar-con="products" :id-ancla="conAnclas ? anclaDe : null" v-slot="{ visibles }">
+        <VerMas por-paginas :items="products" :reiniciar-con="products" :id-ancla="conAnclas ? anclaDe : null" v-slot="{ visibles }">
         <div class="grilla3col">
             <div
                 v-for="producto in visibles"

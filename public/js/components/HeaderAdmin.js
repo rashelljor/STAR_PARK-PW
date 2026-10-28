@@ -23,6 +23,12 @@ export default {
                 <span class="adminModo" role="status" aria-label="Modo Administrador">🛠️<span class="d-none d-sm-inline"> Modo Administrador</span></span>
                 <div class="adminBarraAcciones">
                     <span class="adminCorreo" id="adminCorreo"></span>
+                    <!-- Campanita: preguntas, reservas, pagos, cancelaciones, cumpleaños, stock y reseñas (ver avisosAdminService.js). -->
+                    <button type="button" class="btn btn-sm adminBotonSitio position-relative" id="adminCampana" aria-controls="adminAvisos" aria-expanded="false" aria-label="Notificaciones" title="Notificaciones">
+                        🔔<span class="contadorCarrito d-none" id="adminAvisosCantidad"></span>
+                    </button>
+                    <div class="glass p-3 d-none" id="adminAvisos" role="region" aria-label="Notificaciones del panel"
+                        style="position: fixed; top: 68px; right: 12px; width: min(380px, calc(100vw - 24px)); max-height: 70vh; overflow-y: auto; z-index: 1040; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4)"></div>
                     <a class="btn btn-sm adminBotonSitio" href="../users/index.html" target="_blank" rel="noopener">Ver sitio<span class="d-none d-md-inline"> de clientes</span> ↗</a>
                     <button type="button" class="btn btn-sm adminBotonSalir" data-cerrar-sesion>Cerrar sesión</button>
                 </div>

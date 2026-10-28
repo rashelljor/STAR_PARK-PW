@@ -1,5 +1,5 @@
 import { auth, db } from '../config/firebaseConfig.js'
-import { collection, doc, getDoc, getDocs, increment, query, serverTimestamp, Timestamp, where, writeBatch } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
+import { collection, doc, getDoc, getDocs, increment, onSnapshot, query, serverTimestamp, Timestamp, where, writeBatch } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
 import { contarEntradas } from './cartService.js'
 import { nuevaNotificacion, datosNotificacion } from './notificationService.js'
 import { formatearPrecio, redondear } from '../utils/formatters.js'
@@ -24,7 +24,43 @@ export async function obtenerReserva(id) {
 // Entradas de una reserva. Las del sistema anterior no guardaban "entradas":
 // se cuentan desde sus ítems, igual que en el carrito.
 export function entradasDe(reserva) {
-    return reserva.entradas || contarEntradas(reserva.items || []) || 1
+    return reserva.entradas ?? (contarEntradas(reserva.items || []) || 1)
+}
+
+// Pedido solo del bazar: no lleva entradas y su fecha es la de recojo.
+export function esSoloBazar(reserva) {
+    return reserva.entradas === 0
+}
+
+// Texto corto para los resúmenes: "2 entrada(s)" o "solo bazar".
+export function textoEntradas(reserva) {
+    return esSoloBazar(reserva) ? 'solo productos del bazar' : entradasDe(reserva) + ' entrada(s)'
+}
+
+// Líneas del bazar de una reserva (las que se recogen mostrando el QR).
+export function productosBazar(reserva) {
+    return (reserva.items || []).filter(item => item.categoria === 'bazar')
+}
+
+// Entrada y productos se confirman por separado al escanear el QR. Antes
+// ambos se entregaban al validar la entrada: las reservas de entonces no
+// tienen "productosEntregados" y cuentan como entregadas si se usaron.
+export function productosEntregados(reserva) {
+    return reserva.productosEntregados ?? reserva.estado === 'usada'
+}
+
+// Estado del pedido del bazar: pendiente | porEntregar | entregado | cancelado.
+export function estadoPedido(reserva) {
+    if (reserva.estado === 'cancelada') return 'cancelado'
+    if (!reserva.pagado) return 'pendiente'
+    return productosEntregados(reserva) ? 'entregado' : 'porEntregar'
+}
+
+export const ESTADOS_PEDIDO = {
+    pendiente: 'Pendiente de pago',
+    porEntregar: 'Pagado, por entregar',
+    entregado: 'Entregado',
+    cancelado: 'Cancelado (reembolsado)'
 }
 
 // Unidades del bazar por producto del catálogo (los colores de un producto comparten stock).
@@ -43,7 +79,9 @@ function unidadesBazar(items) {
 // Los montos se guardan como número (antes como texto "S/ 50.00").
 export async function crearReserva({ nombre, correo, telefono, fecha, items, subtotal, cupon = null, descuentoCupon = 0 }) {
     const referencia = doc(reservasRef())
-    // Los productos del bazar viajan en items pero no ocupan aforo.
+    // Los productos del bazar viajan en items pero no ocupan aforo. Un pedido
+    // solo del bazar guarda su registro de aforo con 0 entradas, así se mueve y
+    // se borra igual que el de cualquier reserva.
     const entradas = contarEntradas(items)
     const reserva = {
         uid: auth.currentUser.uid,
@@ -70,10 +108,11 @@ export async function crearReserva({ nombre, correo, telefono, fecha, items, sub
 
 // Solo se editan los datos de contacto y la fecha; el aforo se mueve a la nueva fecha.
 // Las reservas del sistema anterior no tienen registro de aforo y no se les crea uno.
+// Un pedido solo del bazar (0 entradas) sí lo tiene y también se mueve.
 export async function actualizarReserva(reserva, { nombre, correo, telefono, fecha }) {
     const lote = writeBatch(db)
     lote.update(doc(db, 'reservas', reserva.id), { nombre, correo, telefono, fecha, actualizadoEn: serverTimestamp() })
-    if (reserva.entradas) lote.set(doc(db, 'ocupacion', reserva.id), { uid: reserva.uid, fecha, entradas: reserva.entradas })
+    if (reserva.entradas != null) lote.set(doc(db, 'ocupacion', reserva.id), { uid: reserva.uid, fecha, entradas: reserva.entradas })
     await lote.commit()
 }
 
@@ -98,9 +137,17 @@ export async function eliminarReserva(reserva) {
 }
 
 // Una reserva pagada se puede cancelar hasta el día anterior a la visita y
-// mientras su entrada no se haya usado (las reglas de Firestore lo exigen igual).
+// mientras no se haya usado su entrada ni recogido sus productos (las reglas
+// de Firestore lo exigen igual).
 export function esCancelable(reserva, hoy = rangoFechasReserva().minima) {
-    return reserva.pagado === true && reserva.estado === 'pagado' && String(reserva.fecha) > hoy
+    return reserva.pagado === true && reserva.estado === 'pagado' && reserva.productosEntregados !== true && String(reserva.fecha) > hoy
+}
+
+// Escucha una reserva en tiempo real (la entrada QR abierta se entera de que el admin la leyó).
+export function escucharReserva(id, callback, alFallar = console.error) {
+    return onSnapshot(doc(db, 'reservas', id), documento => {
+        if (documento.exists()) callback({ id: documento.id, ...documento.data() })
+    }, alFallar)
 }
 
 // Cancela una reserva pagada y simula el reembolso. Todo en un solo lote:

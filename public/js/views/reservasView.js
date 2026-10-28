@@ -12,7 +12,7 @@ import Footer from '../components/Footer.js'
 import VerMas from '../components/VerMas.js'
 import CalendarioAforo from '../components/CalendarioAforo.js'
 import EntradaQR from '../components/EntradaQR.js'
-import { obtenerReservas, actualizarReserva, eliminarReserva, entradasDe, esCancelable, cancelarReserva } from '../services/bookingService.js'
+import { obtenerReservas, actualizarReserva, eliminarReserva, entradasDe, esSoloBazar, esCancelable, cancelarReserva, productosBazar, productosEntregados, escucharReserva } from '../services/bookingService.js'
 import { cuposLibres } from '../services/capacityService.js'
 import { esperarUsuario } from '../services/authService.js'
 import { avisosNavegador, pedirAvisosNavegador } from '../services/notificationService.js'
@@ -59,11 +59,32 @@ export default {
         }
     },
 
+    watch: {
+        // Mientras la entrada QR está abierta se escucha su reserva: cuando el
+        // admin la lee, el QR muestra al instante lo validado y lo entregado
+        // (el mensaje "QR leído con éxito" llega por la campanita del menú).
+        'entrada.id'(id) {
+            this.dejarDeEscuchar?.()
+            this.dejarDeEscuchar = id ? escucharReserva(id, reserva => {
+                if (this.entrada?.id === reserva.id) this.entrada = reserva
+                const indice = this.reservas.findIndex(item => item.id === reserva.id)
+                if (indice >= 0) this.reservas[indice] = reserva
+            }) : null
+        }
+    },
+
+    unmounted() {
+        this.dejarDeEscuchar?.()
+    },
+
     methods: {
         fechaLegible,
         formatearPrecio,
         entradasDe,
+        esSoloBazar,
         esCancelable,
+        productosBazar,
+        productosEntregados,
 
         // Las más recientes primero.
         async cargar() {
@@ -73,6 +94,7 @@ export default {
 
         textoEstado(reserva) {
             if (reserva.estado === 'cancelada') return '✕ Cancelada'
+            if (esSoloBazar(reserva) && reserva.pagado) return productosEntregados(reserva) ? '✓ Productos entregados' : '✓ Pagada, por recoger'
             if (reserva.estado === 'usada') return '✓ Entrada usada'
             return reserva.pagado ? '✓ Pagada' : 'Pendiente de pago'
         },
@@ -248,6 +270,9 @@ export default {
                                         <span class="estadoReserva" :class="claseEstado(reserva)">
                                             {{ textoEstado(reserva) }}
                                         </span>
+                                        <small v-if="reserva.pagado && reserva.estado !== 'cancelada' && !esSoloBazar(reserva) && productosBazar(reserva).length" class="d-block etiquetaGris mt-1">
+                                            🛍️ Productos del bazar {{ productosEntregados(reserva) ? 'entregados' : 'por recoger' }}
+                                        </small>
                                         <small v-if="reserva.estado === 'cancelada'" class="d-block etiquetaGris mt-1">
                                             {{ reserva.motivoCancelacion }} · Reembolso {{ formatearPrecio(reserva.reembolso) }}
                                         </small>
@@ -259,7 +284,7 @@ export default {
                                             <button class="botonEliminar" @click="eliminar(reserva)">Quitar</button>
                                         </div>
                                         <div v-else class="accionesReserva">
-                                            <button v-if="reserva.estado !== 'cancelada'" class="botonEditar" @click="entrada = reserva">🎟️ Ver entrada</button>
+                                            <button v-if="reserva.estado !== 'cancelada'" class="botonEditar" @click="entrada = reserva">{{ esSoloBazar(reserva) ? '🛍️ Ver QR de recojo' : '🎟️ Ver entrada' }}</button>
                                             <button v-if="esCancelable(reserva)" class="botonEliminar" @click="abrirCancelacion(reserva)">Cancelar</button>
                                             <a class="enlaceBoleta" href="miscompras.html">Ver boleta →</a>
                                         </div>
@@ -275,8 +300,8 @@ export default {
             <!-- Entrada digital con QR (reutiliza la tarjeta de los mensajes centrados). -->
             <div v-if="entrada" class="mensajeFondo" @click.self="entrada = null" @keydown.esc="entrada = null">
                 <div class="mensajeCaja mensaje-exito cajaFormulario" role="dialog" aria-modal="true" aria-labelledby="tituloEntrada">
-                    <h2 class="mensajeTitulo" id="tituloEntrada">Tu entrada a Star Park</h2>
-                    <p class="etiquetaGris mb-3">Muestra este código en la puerta el día de tu visita.</p>
+                    <h2 class="mensajeTitulo" id="tituloEntrada">{{ esSoloBazar(entrada) ? 'Tu pedido del bazar' : 'Tu entrada a Star Park' }}</h2>
+                    <p class="etiquetaGris mb-3">{{ esSoloBazar(entrada) ? 'Muestra este código en el bazar para recoger tus productos sin hacer fila.' : 'Muestra este código en la puerta el día de tu visita.' }}</p>
                     <EntradaQR :reserva="entrada" />
                     <div class="mensajeAcciones">
                         <button type="button" class="mensajeBoton" @click="entrada = null" ref="cerrarEntrada">Cerrar</button>
@@ -324,7 +349,7 @@ export default {
                         <input v-model="edicion.telefono" class="form-control" type="tel" id="editarTelefono" inputmode="numeric" placeholder="999 999 999" autocomplete="tel">
                     </div>
                     <div class="campo">
-                        <span class="form-label celeste">Fecha de visita</span>
+                        <span class="form-label celeste">{{ esSoloBazar(edicion.original) ? 'Fecha de recojo' : 'Fecha de visita' }}</span>
                         <!-- Las reservas antiguas (sin "entradas") no tienen registro de aforo: no hay nada propio que descontar. -->
                         <CalendarioAforo v-model="edicion.fecha" :min="fechas.minima" :max="fechas.maxima"
                             :entradas="entradasDe(edicion.original)"

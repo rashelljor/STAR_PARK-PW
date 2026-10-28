@@ -92,6 +92,7 @@ export async function quitarProducto(id) {
 export async function actualizarDesdeCatalogo() {
     const [carrito, productos] = await Promise.all([leerCarrito(), getProducts()])
     const avisos = []
+    let corregido = false
     if (carrito.length > MAX_LINEAS_CARRITO) avisos.push('Tu carrito admite hasta ' + MAX_LINEAS_CARRITO + ' productos distintos. Quita alguno para reservar.')
 
     const vigentes = carrito.filter(linea => {
@@ -105,6 +106,12 @@ export async function actualizarDesdeCatalogo() {
             avisos.push('El precio de ' + linea.nombre + ' cambió a ' + formatearPrecio(precio) + '.')
             linea.precio = precio
         }
+        // Líneas guardadas antes de que el carrito anotara la categoría: sin ella
+        // un producto del bazar contaría como entrada (y las reglas lo rechazan).
+        if (producto.categoria === 'bazar' && linea.categoria !== 'bazar') {
+            Object.assign(linea, { categoria: 'bazar', productoId: producto.id })
+            corregido = true
+        }
         if (linea.categoria === 'bazar') linea.stock = Number(producto.stock) || 0
         return true
     })
@@ -112,7 +119,7 @@ export async function actualizarDesdeCatalogo() {
         try { revisarStock(vigentes, linea) } catch (error) { if (!avisos.includes(error.message)) avisos.push(error.message) }
     })
 
-    if (vigentes.length !== carrito.length || avisos.length) {
+    if (vigentes.length !== carrito.length || avisos.length || corregido) {
         await guardarCarrito(vigentes)
         avisarCambio(vigentes)
     }

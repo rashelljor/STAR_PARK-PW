@@ -334,14 +334,16 @@ service cloud.firestore {
             getAfter(/databases/$(database)/documents/cupones/$(datos.cupon)).data.get('ultimaDevolucion', '') == id));
       }
 
-      // Cancelar: solo una reserva pagada con la entrada sin usar, antes del día de
-      // la visita (medianoche de Perú, UTC-5). En la misma operación la
-      // transacción queda reembolsada (por su total) y se libera el aforo.
+      // Cancelar: solo una reserva pagada con la entrada sin usar y los productos
+      // del bazar sin recoger, antes del día de la visita (medianoche de Perú,
+      // UTC-5). En la misma operación la transacción queda reembolsada (por su
+      // total) y se libera el aforo.
       function cancelacionValida() {
         let visita = resource.data.fecha.split('-');
         let transaccion = /databases/$(database)/documents/transacciones/$(id);
         return resource.data.pagado == true
           && resource.data.estado == 'pagado'
+          && resource.data.get('productosEntregados', false) != true
           && soloCambia(['estado', 'canceladaEn', 'motivoCancelacion', 'reembolso'])
           && request.resource.data.estado == 'cancelada'
           && request.resource.data.canceladaEn == request.time
@@ -364,7 +366,8 @@ service cloud.firestore {
         && request.resource.data.descuentoCupon is number
         && request.resource.data.subtotal >= 0
         && request.resource.data.entradas is int
-        && request.resource.data.entradas > 0
+        // 0 entradas = pedido solo del bazar (itemsValidos exige que todas las líneas sean del bazar).
+        && request.resource.data.entradas >= 0
         && itemsValidos(request.resource.data)
         && existsAfter(/databases/$(database)/documents/ocupacion/$(id))
         && cuponValido(request.resource.data)

@@ -39,7 +39,7 @@ const VENTANAS = [
     { id: 'comunicaciones', icono: '🔔', texto: 'Comunicaciones' }
 ]
 
-const ICONOS_NOTIFICACION = { reembolso: '💸', respuesta: '💬', info: 'ℹ️' }
+const ICONOS_NOTIFICACION = { reembolso: '💸', respuesta: '💬', qr: '✅', info: 'ℹ️' }
 
 const tarjetaVacia = () => ({ id: null, numero: '', titular: '', vencimiento: '', alias: '' })
 
