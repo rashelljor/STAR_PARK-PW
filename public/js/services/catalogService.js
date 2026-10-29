@@ -1,30 +1,25 @@
 // catalogService.js - Catálogo de productos respaldado por Firestore (colección "productos").
 
-import { db } from '../config/firebaseConfig.js'
-import { collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
+import { leerProductos, leerProductosActivos, leerProductosPorCategoria, leerProducto } from '../repository/productoRepository.js'
 
 const IMAGEN_PRODUCTO_POR_DEFECTO = '../../assets/img/logostar.png'
-
-async function leerProductos() {
-    const snapshot = await getDocs(collection(db, 'productos'))
-    return snapshot.docs.map(documento => ({ id: documento.id, ...documento.data() }))
-}
 
 export function getProducts() {
     return leerProductos()
 }
 
-export async function getActiveProducts() {
-    const snapshot = await getDocs(query(collection(db, 'productos'), where('estado', '==', 'Activo')))
-    return snapshot.docs.map(documento => ({ id: documento.id, ...documento.data() }))
+export function getActiveProducts() {
+    return leerProductosActivos()
 }
 
-export async function getProductsByCategory(categoria) {
-    return (await getActiveProducts()).filter(producto => producto.categoria === categoria)
+// El filtro se hace en Firestore: solo llegan los productos activos de esa categoría.
+export function getProductsByCategory(categoria) {
+    return leerProductosPorCategoria(categoria)
 }
 
-export async function getProductById(id) {
-    return (await leerProductos()).find(producto => producto.id === id)
+// Lee 1 documento en lugar de todo el catálogo.
+export function getProductById(id) {
+    return leerProducto(id)
 }
 
 // Quita tildes y mayúsculas: "Misión", "MISION" y "mision" se comparan igual.

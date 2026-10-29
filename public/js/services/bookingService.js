@@ -1,24 +1,18 @@
 import { auth, db } from '../config/firebaseConfig.js'
-import { collection, doc, getDoc, getDocs, increment, onSnapshot, query, serverTimestamp, Timestamp, where, writeBatch } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
+import { doc, getDoc, increment, serverTimestamp, Timestamp, writeBatch } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
 import { contarEntradas } from './cartService.js'
 import { nuevaNotificacion, datosNotificacion } from './notificationService.js'
 import { formatearPrecio, redondear } from '../utils/formatters.js'
 import { rangoFechasReserva } from '../utils/validators.js'
 import { SEGUNDOS_REEMBOLSO } from '../utils/constants.js'
+import { reservasRef, leerMisReservas, leerReserva, escucharDocumentoReserva } from '../repository/reservaRepository.js'
 
-function reservasRef() {
-    if (!auth.currentUser) throw new Error('Debes iniciar sesión para gestionar reservas.')
-    return collection(db, 'reservas')
+export function obtenerReservas() {
+    return leerMisReservas()
 }
 
-export async function obtenerReservas() {
-    const snapshot = await getDocs(query(reservasRef(), where('uid', '==', auth.currentUser.uid)))
-    return snapshot.docs.map(documento => ({ id: documento.id, ...documento.data() }))
-}
-
-export async function obtenerReserva(id) {
-    const documento = await getDoc(doc(db, 'reservas', id))
-    return documento.exists() ? { id: documento.id, ...documento.data() } : null
+export function obtenerReserva(id) {
+    return leerReserva(id)
 }
 
 // Entradas de una reserva. Las del sistema anterior no guardaban "entradas":
@@ -145,9 +139,7 @@ export function esCancelable(reserva, hoy = rangoFechasReserva().minima) {
 
 // Escucha una reserva en tiempo real (la entrada QR abierta se entera de que el admin la leyó).
 export function escucharReserva(id, callback, alFallar = console.error) {
-    return onSnapshot(doc(db, 'reservas', id), documento => {
-        if (documento.exists()) callback({ id: documento.id, ...documento.data() })
-    }, alFallar)
+    return escucharDocumentoReserva(id, callback, alFallar)
 }
 
 // Cancela una reserva pagada y simula el reembolso. Todo en un solo lote:

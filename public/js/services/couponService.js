@@ -2,7 +2,7 @@
 // Condiciones: primera compra, más de 3 juegos en el carrito o cliente frecuente.
 
 import { db } from '../config/firebaseConfig.js'
-import { collection, doc, getDoc, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
+import { collection, doc, getDoc, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
 import { rangoFechasReserva } from '../utils/validators.js'
 import { redondear } from '../utils/formatters.js'
 import { COMPRAS_CLIENTE_FRECUENTE } from '../utils/constants.js'
@@ -41,8 +41,9 @@ export async function validarCupon(codigo, { subtotal, unidades, compras }) {
 }
 
 // Cupones cuya condición el cliente ya cumple con su carrito y sus compras.
+// Firestore solo envía los activos; vencimiento, usos y condición se revisan aquí.
 export async function cuponesDisponibles({ unidades, compras }) {
-    const snapshot = await getDocs(collection(db, 'cupones'))
+    const snapshot = await getDocs(query(collection(db, 'cupones'), where('activo', '==', true)))
     return snapshot.docs
         .map(documento => ({ id: documento.id, ...documento.data() }))
         .filter(cupon => !motivoRechazo(cupon, { unidades, compras }))

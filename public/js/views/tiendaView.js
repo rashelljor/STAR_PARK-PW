@@ -10,7 +10,7 @@ import ResenasAside, { estrellasTexto } from '../components/ResenasAside.js'
 import { getActiveProducts, searchProducts } from '../services/catalogService.js'
 import { agregarProducto } from '../services/cartService.js'
 import { esperarUsuario, obtenerPerfil } from '../services/authService.js'
-import { obtenerResenasPorProducto, promedioEstrellas } from '../services/reviewService.js'
+import { obtenerResenasPorProducto, obtenerResenasDe, promedioEstrellas } from '../services/reviewService.js'
 import { obtenerPaquetes, obtenerImagenCumpleanos } from '../services/eventService.js'
 import { formatearPrecio, fechaLegible } from '../utils/formatters.js'
 
@@ -110,9 +110,19 @@ export default {
             }
         },
 
+        // Relee solo las reseñas del producto abierto (al abrir el panel o tras opinar).
+        async cargarResenasDe(producto) {
+            try {
+                this.resenas = { ...this.resenas, [producto.id]: await obtenerResenasDe(producto.id) }
+            } catch (error) {
+                console.error(error)
+            }
+        },
+
         verResenas(producto) {
             this.productoResenas = producto
             this.$refs.panelResenas.abrir()
+            this.cargarResenasDe(producto)
         },
 
         buscarServicio() {
@@ -286,7 +296,7 @@ export default {
                 </div>
             </main>
 
-            <ResenasAside ref="panelResenas" :producto="productoResenas" :resenas="resenasAbiertas" :usuario="usuario" @cambio="cargarResenas" />
+            <ResenasAside ref="panelResenas" :producto="productoResenas" :resenas="resenasAbiertas" :usuario="usuario" @cambio="cargarResenasDe(productoResenas)" />
 
             <Footer />
         </div>

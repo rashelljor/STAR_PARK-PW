@@ -9,8 +9,6 @@
 import Header, { EVENTO_PERFIL } from '../components/Header.js'
 import Footer from '../components/Footer.js'
 import VerMas from '../components/VerMas.js'
-import { db } from '../config/firebaseConfig.js'
-import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
 import { esperarUsuario, obtenerPerfil, guardarFotoPerfil } from '../services/authService.js'
 import { obtenerCompras, resumenMillas } from '../services/purchaseService.js'
 import { getProducts } from '../services/catalogService.js'
@@ -21,7 +19,7 @@ import {
     escucharNotificaciones, marcarLeida, marcarTodasLeidas, eliminarNotificacion, avisosNavegador, pedirAvisosNavegador
 } from '../services/notificationService.js'
 import {
-    actualizarPerfil, guardarPreferencias, marcarFavorito, obtenerTarjetas, erroresDatosTarjeta, agregarTarjeta, editarTarjeta,
+    actualizarPerfil, guardarPreferencias, obtenerAtracciones, marcarFavorito, obtenerTarjetas, erroresDatosTarjeta, agregarTarjeta, editarTarjeta,
     eliminarTarjeta, obtenerMisResenas, obtenerMisPreguntas, enviarPregunta, eliminarPregunta
 } from '../services/profileService.js'
 import { notificar, confirmar, notificarAlCargar } from '../utils/notificaciones.js'
@@ -188,8 +186,7 @@ export default {
                 } else if (id === 'preguntas') {
                     this.preguntas = await obtenerMisPreguntas()
                 } else if (id === 'favoritos') {
-                    const snapshot = await getDocs(collection(db, 'atracciones'))
-                    this.atracciones = snapshot.docs.map(documento => ({ id: documento.id, ...documento.data() })).sort((a, b) => (a.orden || 0) - (b.orden || 0))
+                    this.atracciones = await obtenerAtracciones()
                 } else if (id === 'tarjetas') {
                     this.tarjeta = null
                     this.tarjetas = await obtenerTarjetas()

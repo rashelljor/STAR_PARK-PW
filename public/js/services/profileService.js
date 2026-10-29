@@ -30,6 +30,10 @@ export function guardarPreferencias(preferencias) {
 }
 
 // Favoritos: ids de atracciones (los juegos del parque) en el perfil.
+export async function obtenerAtracciones() {
+    return leer(await getDocs(collection(db, 'atracciones'))).sort((a, b) => (a.orden || 0) - (b.orden || 0))
+}
+
 export function marcarFavorito(atraccionId, favorito) {
     return updateDoc(doc(db, 'usuarios', uid()), { favoritos: favorito ? arrayUnion(atraccionId) : arrayRemove(atraccionId) })
 }

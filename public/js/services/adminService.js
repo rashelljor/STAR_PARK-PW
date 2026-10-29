@@ -4,11 +4,15 @@ import {
     collection,
     deleteDoc,
     doc,
+    getCountFromServer,
     getDoc,
     getDocs,
-    onSnapshot,
+    limit,
+    orderBy,
+    query,
     serverTimestamp,
     setDoc,
+    startAfter,
     updateDoc
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
 
@@ -19,11 +23,21 @@ export async function listar(coleccion, ordenar = 'nombre') {
         .sort((a, b) => String(a[ordenar] || a.nombreCompleto || a.correo || '').localeCompare(String(b[ordenar] || b.nombreCompleto || b.correo || '')))
 }
 
-// alFallar se llama si la escucha en tiempo real se corta (permisos, red...).
-export function escuchar(coleccion, callback, alFallar = console.error) {
-    return onSnapshot(collection(db, coleccion), snapshot => {
-        callback(snapshot.docs.map(documento => ({ id: documento.id, ...documento.data() })))
-    }, alFallar)
+// Una tanda de la colección: orderBy + limit, y startAfter desde el último
+// documento de la tanda anterior (despuesDe). Solo se leen "cantidad" documentos.
+// Los documentos sin el campo de orden no aparecen (Firestore no los indexa).
+export async function listarPagina(coleccion, { ordenar = 'nombre', cantidad = 6, despuesDe = null } = {}) {
+    const restricciones = despuesDe ? [orderBy(ordenar), startAfter(despuesDe), limit(cantidad)] : [orderBy(ordenar), limit(cantidad)]
+    const snapshot = await getDocs(query(collection(db, coleccion), ...restricciones))
+    return {
+        items: snapshot.docs.map(documento => ({ id: documento.id, ...documento.data() })),
+        ultimo: snapshot.docs.at(-1) || despuesDe
+    }
+}
+
+// Cantidad de documentos sin descargarlos (para "Mostrando X de N").
+export async function contar(coleccion) {
+    return (await getCountFromServer(collection(db, coleccion))).data().count
 }
 
 export function crear(coleccion, datos) {

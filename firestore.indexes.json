@@ -46,6 +46,15 @@
   //     ]
   //   },
   // ]
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "productos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "categoria", "order": "ASCENDING" }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }

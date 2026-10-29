@@ -2,7 +2,7 @@ import { auth, db } from '../config/firebaseConfig.js'
 import { signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js'
 import { doc, getDoc, runTransaction, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
 import HeaderAdmin from '../components/HeaderAdmin.js'
-import { crear, actualizar, eliminar, listar, escuchar, obtenerDocumento, guardarDocumento } from '../services/adminService.js'
+import { crear, actualizar, eliminar, listar, listarPagina, contar, obtenerDocumento, guardarDocumento } from '../services/adminService.js'
 import { CONTENIDO_INICIAL, ATRACCIONES_INICIALES, SERVICIOS_INICIALES, PRODUCTOS_INICIALES } from '../utils/contenidoInicial.js'
 import { notificar, confirmar, notificarAlCargar } from '../utils/notificaciones.js'
 import { aNumero, fechaLegible, formatearPrecio, milisegundos } from '../utils/formatters.js'
@@ -318,6 +318,48 @@ function paginar(destino) {
     })
     consultaCelular.addEventListener('change', () => mostrar(true))
     return mostrar
+}
+
+// Como paginar(), pero cada "Ver más" pide la siguiente tanda a Firestore
+// (orderBy + limit + startAfter) en lugar de mostrar elementos ya descargados.
+// alCargar(items) dibuja lo leído. Devuelve recargar(), que vuelve a leer las
+// tandas abiertas (tras guardar o borrar).
+function paginarConsulta(destino, { coleccion, ordenar, alCargar }) {
+    const barra = document.createElement('div')
+    barra.className = 'd-flex flex-wrap align-items-center gap-2 mt-2'
+    ;(destino.closest('.table-responsive') || destino).after(barra)
+    let tandas = []
+    let total = 0
+    const cargados = () => tandas.flatMap(tanda => tanda.items)
+    const mostrar = () => {
+        const paso = pasoLista()
+        const mostrados = cargados().length
+        alCargar(cargados())
+        barra.innerHTML = total > paso ? `<span class="small text-white-50">Mostrando ${mostrados} de ${total}</span>
+            ${mostrados < total ? '<button type="button" class="btn btn-sm btn-outline-info" data-ver-mas>Ver más</button>' : ''}
+            ${tandas.length > 1 ? '<button type="button" class="btn btn-sm btn-outline-light" data-ver-menos>Ver menos</button>' : ''}` : ''
+    }
+    const siguiente = async () => {
+        tandas.push(await listarPagina(coleccion, { ordenar, cantidad: pasoLista(), despuesDe: tandas.at(-1)?.ultimo }))
+    }
+    const recargar = async (cuantas = Math.max(1, tandas.length)) => {
+        total = await contar(coleccion)
+        tandas = []
+        while (tandas.length < cuantas && (!tandas.length || cargados().length < total)) await siguiente()
+        mostrar()
+    }
+    barra.addEventListener('click', async evento => {
+        if (evento.target.closest('[data-ver-mas]')) {
+            evento.target.disabled = true
+            try { await siguiente() } catch (fallo) { errorDeCarga(fallo) }
+        } else if (evento.target.closest('[data-ver-menos]')) tandas.pop()
+        else return
+        mostrar()
+        // Al ver menos la lista se acorta: se sigue viendo el botón.
+        barra.scrollIntoView({ block: 'nearest' })
+    })
+    consultaCelular.addEventListener('change', () => recargar(1).catch(errorDeCarga))
+    return recargar
 }
 
 // Tarjetas grandes del panel de control: ícono, título, cifra y un detalle debajo.
@@ -1428,8 +1470,8 @@ function seccionLista(contenedor, { coleccion, titulo, nuevo, campos, iniciales,
 
     const formulario = contenedor.querySelector('[data-form]')
     const lista = contenedor.querySelector('[data-lista]')
-    const mostrar = paginar(lista)
     let items = []
+    const recargar = paginarConsulta(lista, { coleccion, ordenar: 'orden', alCargar: cargados => { items = cargados; dibujar() } })
     const campoDeImagen = campos.find(campo => campo.imagen)
     const mostrarImagen = campoDeImagen ? activarCampoImagen(formulario, campoDeImagen.imagen) : null
 
@@ -1448,7 +1490,6 @@ function seccionLista(contenedor, { coleccion, titulo, nuevo, campos, iniciales,
     const dibujar = () => {
         if (!items.length) {
             lista.innerHTML = `<p class="text-white-50">Aún no hay elementos. Lo que agregues aparecerá en el index.</p><button type="button" class="btn btn-outline-info btn-sm" data-importar>Importar los ${iniciales.length} actuales del index</button>`
-            mostrar()
             return
         }
         lista.innerHTML = items.map(item => `
@@ -1461,13 +1502,9 @@ function seccionLista(contenedor, { coleccion, titulo, nuevo, campos, iniciales,
                 <button type="button" class="btn btn-sm btn-outline-info" data-edit="${item.id}">Editar</button>
                 <button type="button" class="btn btn-sm btn-outline-danger" data-delete="${item.id}">Borrar</button>
             </div>`).join('')
-        mostrar()
     }
 
-    escuchar(coleccion, docs => {
-        items = docs.sort((a, b) => (a.orden || 0) - (b.orden || 0))
-        dibujar()
-    }, errorDeCarga)
+    recargar().catch(errorDeCarga)
 
     contenedor.querySelector('[data-nuevo]').onclick = () => abrirFormulario(null)
     contenedor.querySelector('[data-cancelar]').onclick = cerrarFormulario
@@ -1494,6 +1531,7 @@ function seccionLista(contenedor, { coleccion, titulo, nuevo, campos, iniciales,
             if (id) await actualizar(coleccion, id, datos)
             else await crear(coleccion, { ...datos, orden: Date.now() })
             cerrarFormulario()
+            await recargar()
             notificar(id ? 'Cambios guardados. Ya se ven en el index.' : 'Se añadió a la lista. Ya se ve en el index.', 'exito')
         } catch (fallo) {
             console.error(fallo)
@@ -1509,11 +1547,13 @@ function seccionLista(contenedor, { coleccion, titulo, nuevo, campos, iniciales,
             else if (boton.dataset.delete) {
                 if (!await confirmar('¿Borrar este elemento del index?', { textoConfirmar: 'Borrar', tipo: 'error' })) return
                 await eliminar(coleccion, boton.dataset.delete)
+                await recargar()
                 notificar('Elemento borrado del index.', 'exito')
             }
             else if (boton.hasAttribute('data-importar')) {
                 const base = Date.now()
                 await Promise.all(iniciales.map((item, indice) => crear(coleccion, { ...item, orden: base + indice })))
+                await recargar()
                 notificar('Elementos importados. Ya se ven en el index.', 'exito')
             }
         } catch (fallo) {

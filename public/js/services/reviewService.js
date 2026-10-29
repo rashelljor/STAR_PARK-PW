@@ -3,10 +3,18 @@
 // una sola reseña por producto (si vuelve a opinar, la actualiza).
 
 import { auth, db } from '../config/firebaseConfig.js'
-import { collection, deleteDoc, doc, getDocs, serverTimestamp, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
+import { collection, deleteDoc, doc, getDocs, query, serverTimestamp, setDoc, where } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
 import { milisegundos } from '../utils/formatters.js'
 
-// Todas las reseñas agrupadas por producto, las más recientes primero: { idProducto: [reseña, ...] }.
+// Solo las reseñas de un producto, las más recientes primero (panel de comentarios).
+export async function obtenerResenasDe(productoId) {
+    const snapshot = await getDocs(query(collection(db, 'resenas'), where('productoId', '==', productoId)))
+    return snapshot.docs
+        .map(documento => ({ id: documento.id, ...documento.data() }))
+        .sort((a, b) => milisegundos(b.fecha) - milisegundos(a.fecha))
+}
+
+// Todas las reseñas (para el promedio de cada tarjeta de la tienda) agrupadas por producto, las más recientes primero: { idProducto: [reseña, ...] }.
 export async function obtenerResenasPorProducto() {
     const snapshot = await getDocs(collection(db, 'resenas'))
     const porProducto = {}
