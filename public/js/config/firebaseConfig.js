@@ -3,12 +3,12 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDoCdZNEqvGLyt6_1UoHIXnoiJWuQ9KbyA",
-  authDomain: "starpark-pw.firebaseapp.com",
-  projectId: "starpark-pw",
-  storageBucket: "starpark-pw.firebasestorage.app",
-  messagingSenderId: "281423408740",
-  appId: "1:281423408740:web:785f45ba321184c96e3971"
+  apiKey: "AIzaSyDdfs6a-c87HzDyQaEa5LFYaTZjfXUicDg",
+  authDomain: "star-park-repuesto.firebaseapp.com",
+  projectId: "star-park-repuesto",
+  storageBucket: "star-park-repuesto.firebasestorage.app",
+  messagingSenderId: "259712003881",
+  appId: "1:259712003881:web:ca0fb1cfb84fcf3fc39138"
 };
 
 const app = initializeApp(firebaseConfig);
