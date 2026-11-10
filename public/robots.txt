@@ -1,0 +1,6 @@
+# Las páginas privadas y de administración se excluyen con <meta name="robots" content="noindex">,
+# por eso no se bloquean aquí (si se bloquearan, Google no podría leer ese noindex).
+User-agent: *
+Allow: /
+
+Sitemap: https://star-park-repuesto.web.app/sitemap.xml
